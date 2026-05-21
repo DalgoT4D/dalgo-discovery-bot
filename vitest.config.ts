@@ -7,6 +7,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['dotenv/config'],
     coverage: { reporter: ['text', 'html'] },
+    exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, '.') },

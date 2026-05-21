@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { searchKb } from '@/lib/db/queries/kb';
 import { query } from '@/lib/db/client';
+import { emit } from '@/lib/telemetry';
 
 const CATEGORIES = [
   'data_sources',
@@ -36,6 +37,17 @@ export function searchDalgoKbTool(sessionId: string) {
           [q, sessionId],
         );
       }
+      const top = hits[0];
+      const isHit = !!top && top.score >= 0.3;
+      await emit(
+        isHit ? 'kb_hit' : 'kb_miss',
+        {
+          query: q,
+          top_score: top?.score ?? 0,
+          top_id: top?.id ?? null,
+        },
+        sessionId,
+      );
       return {
         hits: hits.map((h) => ({
           id: h.id,

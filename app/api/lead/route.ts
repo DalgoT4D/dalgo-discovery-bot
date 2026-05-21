@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createLead } from '@/lib/db/queries/leads';
 import { getSession } from '@/lib/db/queries/sessions';
 import { postHotLead } from '@/lib/slack';
+import { emit } from '@/lib/telemetry';
 
 const Body = z.object({
   session_id: z.string().uuid(),
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'session not found' }, { status: 404 });
   }
   const lead = await createLead(body.session_id, body.email, body.intent, body.summary);
+  await emit(
+    'lead_captured',
+    { intent: body.intent, source_cta: 'chat_banner' },
+    body.session_id,
+  );
   if (body.intent === 'demo') {
     await postHotLead({
       email: body.email,

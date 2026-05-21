@@ -6,6 +6,7 @@ import { getSession } from '@/lib/db/queries/sessions';
 import { listMessages, appendMessage } from '@/lib/db/queries/messages';
 import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { emit } from '@/lib/telemetry';
 
 export async function GET(req: NextRequest) {
   const session_id = req.nextUrl.searchParams.get('session_id');
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
   const history = await listMessages(session_id);
 
   await appendMessage(session_id, 'user', { text: message });
+  await emit('message_sent', { role: 'user', text_len: message.length }, session_id);
 
   const messages: CoreMessage[] = history
     .map((m) => {
@@ -96,6 +98,11 @@ export async function POST(req: NextRequest) {
     maxSteps: 6,
     onFinish: async ({ text, usage }) => {
       await appendMessage(session_id, 'assistant', { text }, usage?.completionTokens);
+      await emit(
+        'message_sent',
+        { role: 'assistant', tokens: usage?.completionTokens ?? null },
+        session_id,
+      );
     },
   });
 

@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dalgo Discovery Bot
 
-## Getting Started
+A conversational AI assistant that helps NGOs evaluate whether Dalgo — a data platform built for NGOs by Tech4Dev — fits their needs. Grounded in a 131-entry capability knowledge base.
 
-First, run the development server:
+## Stack
+- Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
+- Vercel AI SDK v4 + Anthropic Claude (Sonnet 4.6)
+- Local Postgres 16 + pgvector via Docker Compose
+- node-postgres (`pg`) for DB access
+- NextAuth v5 (Google SSO) for admin
+- Vitest + Playwright
+
+## Quick start
 
 ```bash
+# 1. Start the database
+docker compose up -d
+
+# 2. Apply schema (first time only)
+docker exec -i dalgo-discovery-db psql -U dalgo -d dalgo_discovery < lib/db/schema.sql
+
+# 3. Configure env
+cp .env.example .env.local
+# fill in ANTHROPIC_API_KEY, OPENAI_API_KEY (for embeddings), TAVILY_API_KEY,
+# NEXTAUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, etc.
+
+# 4. Install + run
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# open http://localhost:3000
+
+# 5. (Optional) Seed the knowledge base
+npm run seed:kb:reset   # requires OPENAI_API_KEY
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` — Next.js dev server (Turbopack)
+- `npm run build` / `npm start` — production
+- `npm test` — Vitest unit + integration
+- `npm run test:e2e` — Playwright happy path
+- `npm run eval` — 30-case LLM eval suite (requires ANTHROPIC_API_KEY + OPENAI_API_KEY)
+- `npm run seed:kb` — incrementally embed + insert KB rows
+- `npm run seed:kb:reset` — truncate + re-seed all 131 entries
+- `npm run lint` — ESLint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment variables
 
-## Learn More
+See `.env.example`. Required at runtime:
 
-To learn more about Next.js, take a look at the following resources:
+- `DATABASE_URL` — Postgres connection
+- `ANTHROPIC_API_KEY` — chat LLM
+- `OPENAI_API_KEY` — embeddings (text-embedding-3-small @ 1536 dim)
+- `TAVILY_API_KEY` — NGO website crawling
+- `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` — admin auth
+- `ADMIN_ALLOWED_EMAIL_DOMAINS` — comma-separated whitelist
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Optional:
+- `RESEND_API_KEY` + `ADMIN_DIGEST_RECIPIENTS` — weekly KB audit email
+- `SLACK_HOT_LEAD_WEBHOOK_URL` — hot-lead Slack notifications
+- `CRON_SECRET` — required by Vercel cron handler
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
+See:
+- Spec: `../docs/superpowers/specs/2026-05-21-dalgo-discovery-bot-design.md`
+- Implementation plan: `../docs/superpowers/plans/2026-05-21-dalgo-discovery-bot.md`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Knowledge base
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 131 entries across 13 categories (data_sources, transforms, dashboards, …)
+- Vector search via pgvector + OpenAI embeddings
+- Admin UI at `/admin/kb` (Google SSO required)
+
+## License
+
+AGPL v3 — matches Dalgo's main project license. See `LICENSE`.
