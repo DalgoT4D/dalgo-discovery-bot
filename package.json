@@ -11,7 +11,8 @@
     "test:watch": "DOTENV_CONFIG_PATH=.env.local vitest",
     "test:e2e": "playwright test",
     "seed:kb": "DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
-    "seed:kb:reset": "SEED_RESET=true DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts"
+    "seed:kb:reset": "SEED_RESET=true DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
+    "eval": "DOTENV_CONFIG_PATH=.env.local vitest run tests/llm/eval.test.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
