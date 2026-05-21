@@ -1,6 +1,7 @@
 'use client';
 import { useChat } from '@ai-sdk/react';
 import { MessageBubble } from './message-bubble';
+import { SoftCtaBanner } from './soft-cta-banner';
 
 export function ChatStream({
   sessionId,
@@ -47,6 +48,10 @@ export function ChatStream({
         ))}
         {isLoading && <p className="text-sm text-slate-500">…</p>}
       </div>
+
+      {messages.filter((m) => m.role === 'user').length >= 3 && (
+        <SoftCtaBanner sessionId={sessionId} />
+      )}
 
       {showIntro && starters.length > 0 && (
         <div className="px-3 pb-2 flex flex-wrap gap-2">
