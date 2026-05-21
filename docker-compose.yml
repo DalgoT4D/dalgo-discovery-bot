@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: dalgo-discovery-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dalgo
+      POSTGRES_PASSWORD: dalgo_dev
+      POSTGRES_DB: dalgo_discovery
+    ports:
+      - "5436:5432"
+    volumes:
+      - dalgo-discovery-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dalgo -d dalgo_discovery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dalgo-discovery-pg:
