@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session?.user) redirect('/api/auth/signin');
+  if (!session?.user) redirect('/signin');
 
   return (
     <div className="min-h-screen flex">
