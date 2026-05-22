@@ -8,9 +8,12 @@ if (!pw) {
 }
 
 const h = await hash(pw, 10);
+// Escape $ chars so Next.js's env loader doesn't interpret them as variable refs
+const escaped = h.replace(/\$/g, '\\$');
+
 console.log('');
-console.log('Add this to .env.local:');
+console.log('Add these to .env.local (note the backslash-escaped $ — required):');
 console.log('');
 console.log(`ADMIN_USERNAME=admin`);
-console.log(`ADMIN_PASSWORD_HASH=${h}`);
+console.log(`ADMIN_PASSWORD_HASH=${escaped}`);
 console.log('');
