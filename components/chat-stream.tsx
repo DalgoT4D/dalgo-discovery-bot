@@ -1,4 +1,5 @@
 'use client';
+import { forwardRef, useImperativeHandle } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { MessageBubble } from './message-bubble';
 import { Markdown } from './markdown';
@@ -6,18 +7,24 @@ import { SoftCtaBanner } from './soft-cta-banner';
 
 function partsToText(parts: { type: string; text?: string }[] | undefined): string {
   if (!parts) return '';
-  return parts.filter((p) => p.type === 'text').map((p) => p.text ?? '').join('');
+  return parts
+    .filter((p) => p.type === 'text')
+    .map((p) => p.text ?? '')
+    .join('');
 }
 
-export function ChatStream({
-  sessionId,
-  greeting,
-  starters = [],
-}: {
-  sessionId: string;
-  greeting?: string;
-  starters?: string[];
-}) {
+export interface ChatStreamHandle {
+  send: (text: string) => void;
+}
+
+export const ChatStream = forwardRef<
+  ChatStreamHandle,
+  {
+    sessionId: string;
+    greeting?: string;
+    starters?: string[];
+  }
+>(function ChatStream({ sessionId, greeting, starters = [] }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     experimental_prepareRequestBody: ({ messages }) => {
@@ -30,11 +37,22 @@ export function ChatStream({
     },
   });
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      send: (text: string) => {
+        if (!text.trim()) return;
+        append({ role: 'user', content: text });
+      },
+    }),
+    [append],
+  );
+
   const isLoading = status === 'streaming' || status === 'submitted';
   const showIntro = messages.length === 0;
 
   return (
-    <div className="flex flex-col h-[80vh] max-w-2xl mx-auto">
+    <div className="flex flex-col h-full max-w-3xl mx-auto">
       <div className="flex-1 overflow-y-auto p-4">
         {showIntro && greeting && (
           <MessageBubble role="assistant">
@@ -46,11 +64,15 @@ export function ChatStream({
           const role = m.role === 'user' ? 'user' : 'assistant';
           return (
             <MessageBubble key={m.id} role={role}>
-              {role === 'assistant' ? <Markdown text={text} /> : <span className="whitespace-pre-wrap">{text}</span>}
+              {role === 'assistant' ? (
+                <Markdown text={text} />
+              ) : (
+                <span className="whitespace-pre-wrap">{text}</span>
+              )}
             </MessageBubble>
           );
         })}
-        {isLoading && <p className="text-sm text-slate-500">…</p>}
+        {isLoading && <p className="text-sm text-slate-500 pl-2">…</p>}
       </div>
 
       {messages.filter((m) => m.role === 'user').length >= 3 && (
@@ -58,7 +80,7 @@ export function ChatStream({
       )}
 
       {showIntro && starters.length > 0 && (
-        <div className="px-3 pb-2 flex flex-wrap gap-2">
+        <div className="px-4 pb-2 flex flex-wrap gap-2">
           {starters.map((s) => (
             <button
               key={s}
@@ -72,7 +94,7 @@ export function ChatStream({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="border-t p-3 flex gap-2">
+      <form onSubmit={handleSubmit} className="border-t bg-white p-3 flex gap-2">
         <input
           value={input}
           onChange={handleInputChange}
@@ -82,11 +104,11 @@ export function ChatStream({
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-slate-900 text-white px-3 py-2 rounded"
+          className="bg-slate-900 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           Send
         </button>
       </form>
     </div>
   );
-}
+});

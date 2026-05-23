@@ -7,6 +7,7 @@ import { listMessages, appendMessage } from '@/lib/db/queries/messages';
 import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { emit } from '@/lib/telemetry';
+import { getOrCreateIntro } from '@/lib/llm/intro-generator';
 
 export async function GET(req: NextRequest) {
   const session_id = req.nextUrl.searchParams.get('session_id');
@@ -20,19 +21,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }
 
-  const summary = session.ngo_summary
-    ? `I took a look at your organization.`
-    : 'your organization';
-  const systems = session.ngo_systems ? ` Since you mentioned ${session.ngo_systems},` : '';
-  const greeting = `Hi! ${summary}${systems} here are 3 questions other NGOs in your space often ask. Or feel free to ask anything else.`;
+  const intro = await getOrCreateIntro(session_id);
+
+  // Build a greeting that explicitly surfaces what we learned about the NGO,
+  // so the user can see the URL/PDF/intake context wasn't wasted.
+  const parts: string[] = ['Hi!'];
+  if (intro.learned) {
+    parts.push(`**Here's what I picked up about you:** ${intro.learned}`);
+  } else if (session.ngo_systems) {
+    parts.push(`You mentioned you use **${session.ngo_systems}** today.`);
+  } else {
+    parts.push('Ask me anything about whether Dalgo fits your needs.');
+  }
+  parts.push('Here are a few questions you might want to start with — or browse the categories on the left, or just type anything.');
+  const greeting = parts.join('\n\n');
 
   return NextResponse.json({
     greeting,
-    starters: [
-      'Can Dalgo connect to KoboToolbox?',
-      'How would Dalgo handle our M&E reporting?',
-      'What does setup look like for a small team?',
-    ],
+    starters: intro.starters,
     ready: true,
   });
 }
