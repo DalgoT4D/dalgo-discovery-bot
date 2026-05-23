@@ -1,7 +1,13 @@
 'use client';
 import { useChat } from '@ai-sdk/react';
 import { MessageBubble } from './message-bubble';
+import { Markdown } from './markdown';
 import { SoftCtaBanner } from './soft-cta-banner';
+
+function partsToText(parts: { type: string; text?: string }[] | undefined): string {
+  if (!parts) return '';
+  return parts.filter((p) => p.type === 'text').map((p) => p.text ?? '').join('');
+}
 
 export function ChatStream({
   sessionId,
@@ -32,20 +38,18 @@ export function ChatStream({
       <div className="flex-1 overflow-y-auto p-4">
         {showIntro && greeting && (
           <MessageBubble role="assistant">
-            <span>{greeting}</span>
+            <Markdown text={greeting} />
           </MessageBubble>
         )}
-        {messages.map((m) => (
-          <MessageBubble key={m.id} role={m.role === 'user' ? 'user' : 'assistant'}>
-            {typeof m.content === 'string' ? (
-              <span>{m.content}</span>
-            ) : (
-              m.parts?.map((p, i) =>
-                p.type === 'text' ? <span key={i}>{p.text}</span> : null,
-              )
-            )}
-          </MessageBubble>
-        ))}
+        {messages.map((m) => {
+          const text = typeof m.content === 'string' ? m.content : partsToText(m.parts);
+          const role = m.role === 'user' ? 'user' : 'assistant';
+          return (
+            <MessageBubble key={m.id} role={role}>
+              {role === 'assistant' ? <Markdown text={text} /> : <span className="whitespace-pre-wrap">{text}</span>}
+            </MessageBubble>
+          );
+        })}
         {isLoading && <p className="text-sm text-slate-500">…</p>}
       </div>
 
