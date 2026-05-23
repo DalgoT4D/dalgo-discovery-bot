@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/client';
 
 const CATEGORY_LABELS: Record<string, string> = {
+  case_studies: 'Customer stories',
+  pricing: 'Pricing & licensing',
   data_sources: 'Data sources',
   transforms: 'Transformations',
   dashboards: 'Dashboards & charts',
@@ -11,13 +13,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   ai: 'AI features',
   security: 'Security',
   deployment: 'Deployment & hosting',
-  pricing: 'Pricing & licensing',
   mission: 'About Dalgo',
   stack: 'Tech stack',
   limitations: 'What Dalgo does NOT do',
 };
 
 const CATEGORY_ORDER = [
+  'case_studies',
+  'pricing',
   'data_sources',
   'transforms',
   'dashboards',
@@ -27,13 +30,13 @@ const CATEGORY_ORDER = [
   'ai',
   'security',
   'deployment',
-  'pricing',
   'mission',
   'stack',
   'limitations',
 ];
 
 const CATEGORY_ICONS: Record<string, string> = {
+  case_studies: '🌟',
   data_sources: '🔌',
   transforms: '🧪',
   dashboards: '📊',

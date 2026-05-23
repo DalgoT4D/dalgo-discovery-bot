@@ -14,12 +14,13 @@ import { pricing } from './seed-data/pricing';
 import { mission } from './seed-data/mission';
 import { stack } from './seed-data/stack';
 import { limitations } from './seed-data/limitations';
+import { caseStudies } from './seed-data/case-studies';
 import type { KbSeed } from './seed-data/types';
 
 const all: KbSeed[] = [
   ...dataSources, ...transforms, ...dashboards, ...orchestration,
   ...ai, ...sharing, ...rbac, ...security, ...deployment,
-  ...pricing, ...mission, ...stack, ...limitations,
+  ...pricing, ...mission, ...stack, ...limitations, ...caseStudies,
 ];
 
 function pgVectorLiteral(v: number[]): string {
@@ -28,9 +29,13 @@ function pgVectorLiteral(v: number[]): string {
 
 async function main() {
   console.log(`Seeding ${all.length} KB entries...`);
-  if (all.length !== 131) {
-    throw new Error(`Expected 131 entries, got ${all.length}. Check seed files.`);
-  }
+  console.log(
+    `Counts: data_sources ${dataSources.length}, transforms ${transforms.length}, ` +
+    `dashboards ${dashboards.length}, orchestration ${orchestration.length}, ai ${ai.length}, ` +
+    `sharing ${sharing.length}, rbac ${rbac.length}, security ${security.length}, ` +
+    `deployment ${deployment.length}, pricing ${pricing.length}, mission ${mission.length}, ` +
+    `stack ${stack.length}, limitations ${limitations.length}, case_studies ${caseStudies.length}`,
+  );
 
   if (process.env.SEED_RESET === 'true') {
     console.log('SEED_RESET=true — truncating dalgo_knowledge_base...');
