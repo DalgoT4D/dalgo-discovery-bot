@@ -213,3 +213,26 @@ CREATE TABLE IF NOT EXISTS dalgo_problem_patterns (
   updated_at         timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS problem_patterns_tsv_idx       ON dalgo_problem_patterns USING gin (tsv);
+
+-- ============================================================
+-- Phase 3: Provenance + retrieval trace (added 2026-05-25)
+-- ============================================================
+
+ALTER TABLE dalgo_knowledge_base
+  ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'seed';
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'dalgo_knowledge_base_source_check'
+  ) THEN
+    ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_source_check
+      CHECK (source IN ('seed','admin_manual','promoted_from_conversation','promoted_from_unanswered'));
+  END IF;
+END $$;
+
+ALTER TABLE dalgo_knowledge_base
+  ADD COLUMN IF NOT EXISTS source_message_id uuid REFERENCES messages(id) ON DELETE SET NULL;
+ALTER TABLE dalgo_knowledge_base
+  ADD COLUMN IF NOT EXISTS author_email text;
+
+ALTER TABLE messages
+  ADD COLUMN IF NOT EXISTS retrieval_trace jsonb;
