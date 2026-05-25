@@ -4,6 +4,7 @@ import { anthropic, MODEL } from '@/lib/llm/client';
 import { staticSystem, ngoContextBlock } from '@/lib/llm/system-prompt';
 import { getSession } from '@/lib/db/queries/sessions';
 import { listMessages, appendMessage } from '@/lib/db/queries/messages';
+import { query } from '@/lib/db/client';
 import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { emit } from '@/lib/telemetry';
@@ -102,10 +103,6 @@ export async function POST(req: NextRequest) {
       console.error('[chat] pipeline failed:', e);
     }
   }
-  // trace is stored in memory only; persistence into messages.retrieval_trace
-  // arrives in Phase 3 Task 1.
-  void trace;
-
   const retrievalBlock =
     prePassages.length > 0
       ? `## Retrieved context for this turn\n${prePassages.join('\n\n---\n\n')}\n\nUse the above as primary evidence. Tools remain available if you need additional lookup.`
@@ -128,7 +125,20 @@ export async function POST(req: NextRequest) {
     tools: buildToolset(session_id),
     maxSteps: 6,
     onFinish: async ({ text, usage }) => {
-      await appendMessage(session_id, 'assistant', { text }, usage?.completionTokens);
+      const assistantRow = await appendMessage(
+        session_id,
+        'assistant',
+        { text },
+        usage?.completionTokens,
+      );
+      if (trace) {
+        await query(
+          `UPDATE messages
+              SET retrieval_trace = $1::jsonb
+            WHERE id = $2`,
+          [JSON.stringify(trace), assistantRow.id],
+        );
+      }
       await emit(
         'message_sent',
         { role: 'assistant', tokens: usage?.completionTokens ?? null },
