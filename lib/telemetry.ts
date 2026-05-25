@@ -9,7 +9,9 @@ export type EventName =
   | 'tool_call'
   | 'lead_captured'
   | 'report_generated'
-  | 'feedback_given';
+  | 'feedback_given'
+  | 'blog_search'
+  | 'pattern_match';
 
 export async function emit(
   name: EventName,
