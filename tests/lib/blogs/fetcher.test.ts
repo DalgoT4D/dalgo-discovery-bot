@@ -1,6 +1,6 @@
 // tests/lib/blogs/fetcher.test.ts
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mkdtempSync, rmSync, readdirSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fetchPost } from '@/lib/blogs/fetcher';
@@ -17,7 +17,7 @@ describe('fetchPost', () => {
       text: async () => '<html>hello</html>',
     });
     const url = 'https://example.com/post-1/';
-    const result = await fetchPost(url, { cacheDir, fetchFn: fetchMock as any });
+    const result = await fetchPost(url, { cacheDir, fetchFn: fetchMock as unknown as typeof fetch });
     expect(result.html).toBe('<html>hello</html>');
     expect(result.fromCache).toBe(false);
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -31,8 +31,8 @@ describe('fetchPost', () => {
       text: async () => '<html>cached</html>',
     });
     const url = 'https://example.com/post-2/';
-    await fetchPost(url, { cacheDir, fetchFn: fetchMock as any });
-    const second = await fetchPost(url, { cacheDir, fetchFn: fetchMock as any });
+    await fetchPost(url, { cacheDir, fetchFn: fetchMock as unknown as typeof fetch });
+    const second = await fetchPost(url, { cacheDir, fetchFn: fetchMock as unknown as typeof fetch });
     expect(second.html).toBe('<html>cached</html>');
     expect(second.fromCache).toBe(true);
     expect(fetchMock).toHaveBeenCalledOnce(); // still only one network call
@@ -42,7 +42,7 @@ describe('fetchPost', () => {
   it('throws on non-OK response', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 });
     await expect(
-      fetchPost('https://example.com/missing/', { cacheDir, fetchFn: fetchMock as any }),
+      fetchPost('https://example.com/missing/', { cacheDir, fetchFn: fetchMock as unknown as typeof fetch }),
     ).rejects.toThrow(/404/);
     rmSync(cacheDir, { recursive: true });
   });
