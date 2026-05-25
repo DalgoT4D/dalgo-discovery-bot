@@ -20,6 +20,7 @@ export interface ParsedArticle {
   publishedAt: string | null;   // ISO date 'YYYY-MM-DD' or null
   excerpt: string | null;
   contentMd: string;
+  category?: string;   // set by the orchestrator before upsert
 }
 
 export interface Chunk {
