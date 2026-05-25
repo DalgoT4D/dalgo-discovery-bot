@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS dalgo_knowledge_base (
   category          text NOT NULL CHECK (category IN (
                       'data_sources','transforms','dashboards','orchestration',
                       'ai','sharing','rbac','security','deployment',
-                      'pricing','mission','stack','limitations')),
+                      'pricing','mission','stack','limitations','case_studies')),
   question_variants text[] NOT NULL,
   canonical_answer  text NOT NULL,
   status            text NOT NULL CHECK (status IN ('yes','partial','no','roadmap')),
@@ -142,11 +142,10 @@ CREATE TABLE IF NOT EXISTS dalgo_blog_articles (
   excerpt         text,
   content_md      text NOT NULL,
   content_hash    text NOT NULL,
-  article_context text,
+  article_context text,                  -- populated by contextualizer; NULL means not yet processed
   last_fetched_at timestamptz NOT NULL DEFAULT now(),
   created_at      timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS blog_articles_url_idx      ON dalgo_blog_articles (url);
 CREATE INDEX IF NOT EXISTS blog_articles_category_idx ON dalgo_blog_articles (category);
 
 CREATE TABLE IF NOT EXISTS dalgo_blog_chunks (
