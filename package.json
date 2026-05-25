@@ -15,6 +15,7 @@
     "seed:blogs": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-blogs.ts",
     "seed:patterns": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-patterns.ts",
     "eval": "DOTENV_CONFIG_PATH=.env.local vitest run tests/llm/eval.test.ts",
+    "eval:new": "DOTENV_CONFIG_PATH=.env.local tsx scripts/run-new-evals.ts",
     "admin:hash": "node scripts/hash-password.mjs"
   },
   "dependencies": {
