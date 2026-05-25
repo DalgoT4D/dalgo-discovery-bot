@@ -1,4 +1,11 @@
-export interface EvalCase {
+// NOTE: This is the LEGACY EvalCase shape used by the original 30 KB-only QA
+// cases. Task 18 introduced a new `EvalCase` interface in `./cases/types.ts`
+// for the 50 Phase-2 cases (problem-statements, tool-names, citations,
+// guardrails, structure). To free up the `EvalCase` name for the new shape,
+// the legacy type/array are renamed to `LegacyEvalCase` / `legacyEvalCases`.
+// The legacy runner is preserved in `runner.ts` under `runLegacyOne` /
+// `runLegacyAll`.
+export interface LegacyEvalCase {
   id: string;
   message: string;
   expectKbHitContains?: string;
@@ -7,7 +14,7 @@ export interface EvalCase {
   ngoContext?: { ngo_systems?: string; data_types?: string[] };
 }
 
-export const evalCases: EvalCase[] = [
+export const legacyEvalCases: LegacyEvalCase[] = [
   // 10 YES
   { id: 'kobo',     message: 'Can Dalgo connect to KoboToolbox?', expectKbHitContains: 'KoboToolbox', expectedStatus: 'yes' },
   { id: 'commcare', message: 'Does Dalgo work with CommCare?', expectKbHitContains: 'CommCare', expectedStatus: 'yes' },
