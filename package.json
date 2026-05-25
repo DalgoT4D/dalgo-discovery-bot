@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "seed:kb": "DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
     "seed:kb:reset": "SEED_RESET=true DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
+    "seed:blogs": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-blogs.ts",
     "eval": "DOTENV_CONFIG_PATH=.env.local vitest run tests/llm/eval.test.ts",
     "admin:hash": "node scripts/hash-password.mjs"
   },
