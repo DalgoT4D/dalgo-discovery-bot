@@ -212,5 +212,4 @@ CREATE TABLE IF NOT EXISTS dalgo_problem_patterns (
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS problem_patterns_embedding_idx ON dalgo_problem_patterns USING ivfflat (embedding vector_cosine_ops) WITH (lists = 20);
 CREATE INDEX IF NOT EXISTS problem_patterns_tsv_idx       ON dalgo_problem_patterns USING gin (tsv);
