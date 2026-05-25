@@ -172,3 +172,45 @@ CREATE TABLE IF NOT EXISTS blog_refresh_jobs (
   posts_skipped int NOT NULL DEFAULT 0,
   error         text
 );
+
+-- ============================================================
+-- Phase 2: Hybrid retrieval (added 2026-05-25)
+-- ============================================================
+
+-- IMMUTABLE wrapper around array_to_string (the built-in is STABLE,
+-- which Postgres rejects in GENERATED ALWAYS expressions). Safe because
+-- the result depends only on the inputs.
+CREATE OR REPLACE FUNCTION immutable_array_to_string(text[], text)
+RETURNS text
+LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$ SELECT array_to_string($1, $2) $$;
+
+-- Add lexical search to the existing KB so it can participate in hybrid retrieval
+ALTER TABLE dalgo_knowledge_base
+  ADD COLUMN IF NOT EXISTS tsv tsvector GENERATED ALWAYS AS (
+    to_tsvector('english'::regconfig,
+      immutable_array_to_string(question_variants, ' ') || ' ' || canonical_answer)
+  ) STORED;
+CREATE INDEX IF NOT EXISTS kb_tsv_idx ON dalgo_knowledge_base USING gin (tsv);
+
+-- Curated problem patterns (consultant brain)
+CREATE TABLE IF NOT EXISTS dalgo_problem_patterns (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  archetype          text NOT NULL UNIQUE,
+  problem_phrasing   text[] NOT NULL,
+  consultant_framing text NOT NULL,
+  dalgo_response     text NOT NULL,
+  evidence_urls      text[] NOT NULL DEFAULT '{}',
+  embedding          vector(1536) NOT NULL,
+  tsv                tsvector GENERATED ALWAYS AS (
+                       to_tsvector('english'::regconfig,
+                         coalesce(archetype,'') || ' ' ||
+                         coalesce(immutable_array_to_string(problem_phrasing,' '),'') || ' ' ||
+                         coalesce(consultant_framing,'')
+                       )
+                     ) STORED,
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS problem_patterns_embedding_idx ON dalgo_problem_patterns USING ivfflat (embedding vector_cosine_ops) WITH (lists = 20);
+CREATE INDEX IF NOT EXISTS problem_patterns_tsv_idx       ON dalgo_problem_patterns USING gin (tsv);
