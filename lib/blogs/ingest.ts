@@ -82,9 +82,10 @@ export async function runIngest(opts: IngestOpts): Promise<JobSummary> {
         else summary.postsSkipped++;
       } catch (e) {
         console.error(`[blogs] ingest failed for ${ref.url}:`, e);
+      } finally {
+        await persistProgress(jobId, summary);
+        if (opts.onProgress) await opts.onProgress(summary);
       }
-      await persistProgress(jobId, summary);
-      if (opts.onProgress) await opts.onProgress(summary);
     }
 
     await finishJob(jobId, true);
