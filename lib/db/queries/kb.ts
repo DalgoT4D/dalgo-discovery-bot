@@ -49,3 +49,30 @@ export async function searchKb(
     score: 1 - r.distance,
   }));
 }
+
+// New: lexical KB search for hybrid retrieval
+export interface KbLexicalHit {
+  id: string;
+  category: string;
+  question_variants: string[];
+  canonical_answer: string;
+  status: 'yes' | 'partial' | 'no' | 'roadmap';
+  ngo_framing: string | null;
+  evidence: string[];
+  notes_for_sales: string | null;
+  rank: number;
+}
+
+export async function lexicalSearchKb(q: string, topK = 20): Promise<KbLexicalHit[]> {
+  const { rows } = await query<KbLexicalHit>(
+    `SELECT id, category, question_variants, canonical_answer, status, ngo_framing,
+            evidence, notes_for_sales,
+            ts_rank_cd(tsv, plainto_tsquery('english', $1))::float AS rank
+       FROM dalgo_knowledge_base
+      WHERE tsv @@ plainto_tsquery('english', $1)
+   ORDER BY rank DESC
+      LIMIT $2`,
+    [q, topK],
+  );
+  return rows.map(r => ({ ...r, evidence: r.evidence ?? [] }));
+}
