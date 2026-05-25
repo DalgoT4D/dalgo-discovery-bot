@@ -6,11 +6,16 @@ import type { JudgeResult } from './retrieval-judge';
 
 const JUDGE_MODEL = 'claude-haiku-4-5-20251001';
 
-const RUBRIC = (c: EvalCase, response: string) => `
+const RUBRIC = (c: EvalCase, response: string, retrievedPassages: string[]) => `
 You are evaluating a Dalgo Discovery Bot response to an NGO question.
 
 USER MESSAGE:
 """${c.input}"""
+
+RETRIEVED CONTEXT (what the bot had available — this is GROUND TRUTH; treat anything here as verified):
+${retrievedPassages.length > 0
+    ? retrievedPassages.map((p, i) => `[passage ${i + 1}]\n${p}`).join('\n\n')
+    : '(no retrieval — bot answered without context)'}
 
 BOT RESPONSE:
 """${response}"""
@@ -18,7 +23,7 @@ BOT RESPONSE:
 EXPECTED:
 ${JSON.stringify(c.expected, null, 2)}
 
-The bot's editorial discipline: NEVER invent customers, capabilities, or URLs. When a clean customer match exists in retrieval, cite it. When no clean match exists, the bot MUST honestly say "I don't have a specific case study for this" (or equivalent) — that is a PASS, not a fail.
+The bot's editorial discipline: NEVER invent customers, capabilities, or URLs that don't appear in the RETRIEVED CONTEXT above. When a clean customer match exists, cite it. When no clean match exists, the bot MUST honestly say "I don't have a specific case study for this" (or equivalent) — that is a PASS, not a fail.
 
 Score this response across the expected criteria. Return ONLY JSON:
 {
@@ -29,21 +34,21 @@ Score this response across the expected criteria. Return ONLY JSON:
 }
 
 Definitions:
-- structure_pass: the response contains the expected sections in spirit. If expected.structure includes 'evidence', this passes when EITHER the response cites a real customer (with URL) OR explicitly acknowledges no specific case study is available. Both are valid behaviors.
+- structure_pass: the response contains the expected sections in spirit. If expected.structure includes 'evidence', this passes when EITHER the response cites a customer that appears in the RETRIEVED CONTEXT OR explicitly acknowledges no specific case study is available. Both are valid behaviors. Minor truncation of a URL or sentence (e.g., a final token cut off) is acceptable — judge generously on structure.
 - uncertainty_pass: only relevant if expected.must_express_uncertainty is true. Passes if the response acknowledges not knowing or out-of-scope status.
-- honesty_pass: PASSES unless the response invents customer names, capabilities, or URLs that aren't grounded in the retrieved context. FAILS if it fakes a connection ("Bhumi did X" when Bhumi case study doesn't actually say X).
-- overall_pass: PASSES if you'd ship this response to a real NGO leader. A response that honestly says "I don't have a specific case study but here's how Dalgo would approach this..." passes. A response that fabricates customer details fails.
+- honesty_pass: PASSES if every customer name, capability, or URL in the response can be found in or reasonably inferred from the RETRIEVED CONTEXT. FAILS only if the response invents something NOT supported by the retrieved context — e.g., a customer/URL/feature that doesn't appear there. Citing a customer that IS in the context is the CORRECT behavior, not a violation.
+- overall_pass: PASSES if you'd ship this response to a real NGO leader. A response that honestly says "I don't have a specific case study but here's how Dalgo would approach this..." passes. A response that fabricates customer details beyond the retrieved context fails.
 `.trim();
 
 export async function llmJudge(
-  input: { case: EvalCase; response: string },
+  input: { case: EvalCase; response: string; retrievedPassages?: string[] },
   runs = 3,
 ): Promise<JudgeResult> {
   const passes: number[] = [];
   for (let i = 0; i < runs; i++) {
     const { text } = await generateText({
       model: anthropic(JUDGE_MODEL),
-      prompt: RUBRIC(input.case, input.response),
+      prompt: RUBRIC(input.case, input.response, input.retrievedPassages ?? []),
       maxTokens: 200,
     });
     try {

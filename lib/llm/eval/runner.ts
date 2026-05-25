@@ -158,7 +158,7 @@ async function synthesizeAnswer(
     model: anthropic(SYNTH_MODEL),
     system: augmented,
     prompt: c.input,
-    maxTokens: 600,
+    maxTokens: 1500,
   });
   return text;
 }
@@ -194,7 +194,11 @@ export async function runOne(c: EvalCase): Promise<RunResult> {
       if (j === 'retrieval-judge') {
         judgeResults.push(await retrievalJudge({ case: c, response, trace: pipe.trace }));
       } else if (j === 'llm-judge') {
-        judgeResults.push(await llmJudge({ case: c, response }));
+        judgeResults.push(await llmJudge({
+          case: c,
+          response,
+          retrievedPassages: pipe.topPassages.map((p) => p.text),
+        }));
       } else if (j === 'exact-match') {
         judgeResults.push(await exactMatchJudge({ case: c, sessionId }));
       }
