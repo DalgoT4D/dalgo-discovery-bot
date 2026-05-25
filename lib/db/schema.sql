@@ -117,3 +117,59 @@ BEGIN
   LIMIT match_count;
 END;
 $$;
+
+-- ============================================================
+-- Phase 1: Blog ingestion (added 2026-05-25)
+-- ============================================================
+
+-- Sync the live category CHECK (case_studies was added in prod
+-- but not in schema.sql). Re-running this is idempotent.
+ALTER TABLE dalgo_knowledge_base DROP CONSTRAINT IF EXISTS dalgo_knowledge_base_category_check;
+ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_category_check
+  CHECK (category IN (
+    'data_sources','transforms','dashboards','orchestration',
+    'ai','sharing','rbac','security','deployment',
+    'pricing','mission','stack','limitations','case_studies'
+  ));
+
+CREATE TABLE IF NOT EXISTS dalgo_blog_articles (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  url             text UNIQUE NOT NULL,
+  title           text NOT NULL,
+  category        text NOT NULL,
+  author          text,
+  published_at    date,
+  excerpt         text,
+  content_md      text NOT NULL,
+  content_hash    text NOT NULL,
+  article_context text,
+  last_fetched_at timestamptz NOT NULL DEFAULT now(),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS blog_articles_url_idx      ON dalgo_blog_articles (url);
+CREATE INDEX IF NOT EXISTS blog_articles_category_idx ON dalgo_blog_articles (category);
+
+CREATE TABLE IF NOT EXISTS dalgo_blog_chunks (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  article_id      uuid NOT NULL REFERENCES dalgo_blog_articles(id) ON DELETE CASCADE,
+  chunk_index     int  NOT NULL,
+  chunk_text      text NOT NULL,
+  contextual_text text NOT NULL,
+  embedding       vector(1536) NOT NULL,
+  tsv             tsvector GENERATED ALWAYS AS (to_tsvector('english', contextual_text)) STORED,
+  UNIQUE (article_id, chunk_index)
+);
+CREATE INDEX IF NOT EXISTS blog_chunks_embedding_idx ON dalgo_blog_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX IF NOT EXISTS blog_chunks_tsv_idx       ON dalgo_blog_chunks USING gin (tsv);
+
+CREATE TABLE IF NOT EXISTS blog_refresh_jobs (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  status        text NOT NULL CHECK (status IN ('running','succeeded','failed')),
+  started_at    timestamptz NOT NULL DEFAULT now(),
+  finished_at   timestamptz,
+  posts_seen    int NOT NULL DEFAULT 0,
+  posts_new     int NOT NULL DEFAULT 0,
+  posts_updated int NOT NULL DEFAULT 0,
+  posts_skipped int NOT NULL DEFAULT 0,
+  error         text
+);

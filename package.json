@@ -24,6 +24,7 @@
     "@supabase/supabase-js": "^2.106.1",
     "ai": "^4.3.19",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.2.0",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta",
     "openai": "^4.104.0",
@@ -36,6 +37,7 @@
     "remark-gfm": "^4.0.1",
     "resend": "^4.8.0",
     "swr": "^2.4.1",
+    "turndown": "^7.2.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -48,6 +50,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/turndown": "^5.0.6",
     "@vitest/ui": "^2.1.9",
     "dotenv": "^17.4.2",
     "eslint": "^9",
