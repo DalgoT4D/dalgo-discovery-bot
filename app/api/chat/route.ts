@@ -8,6 +8,7 @@ import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { emit } from '@/lib/telemetry';
 import { getOrCreateIntro } from '@/lib/llm/intro-generator';
+import { runPipeline, type RetrievalTrace } from '@/lib/llm/rag/pipeline';
 
 export async function GET(req: NextRequest) {
   const session_id = req.nextUrl.searchParams.get('session_id');
@@ -87,6 +88,29 @@ export async function POST(req: NextRequest) {
     data_types: session.data_types,
   });
 
+  // Pre-retrieve via the RAG pipeline before streaming, so the model has
+  // top passages in context from the first token. If retrieval fails for any
+  // reason, fall back to the un-augmented prompt — tools remain available.
+  let prePassages: string[] = [];
+  let trace: RetrievalTrace | null = null;
+  if (typeof message === 'string' && message.length > 5) {
+    try {
+      const pipelineResult = await runPipeline(message);
+      prePassages = pipelineResult.topPassages.map((p) => p.text);
+      trace = pipelineResult.trace;
+    } catch (e) {
+      console.error('[chat] pipeline failed:', e);
+    }
+  }
+  // trace is stored in memory only; persistence into messages.retrieval_trace
+  // arrives in Phase 3 Task 1.
+  void trace;
+
+  const retrievalBlock =
+    prePassages.length > 0
+      ? `## Retrieved context for this turn\n${prePassages.join('\n\n---\n\n')}\n\nUse the above as primary evidence. Tools remain available if you need additional lookup.`
+      : null;
+
   const systemMessages: CoreMessage[] = [
     {
       role: 'system',
@@ -95,6 +119,7 @@ export async function POST(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     ...(ngoBlock ? [{ role: 'system' as const, content: ngoBlock }] : []),
+    ...(retrievalBlock ? [{ role: 'system' as const, content: retrievalBlock }] : []),
   ];
 
   const result = streamText({
