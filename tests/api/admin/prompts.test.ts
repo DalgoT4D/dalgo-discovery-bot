@@ -1,7 +1,8 @@
-import { describe, it, expect, afterAll, vi, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, afterEach, vi, beforeEach } from 'vitest';
 import 'dotenv/config';
 import { pool, query } from '@/lib/db/client';
 
+// vi.mock is hoisted by Vitest above all imports — visual order in source does not matter.
 vi.mock('@/lib/auth', () => ({
   auth: vi.fn(async () => ({ user: { email: 'test@dalgo.org' } })),
 }));
@@ -53,6 +54,15 @@ describe('PUT /api/admin/prompts/[key]', () => {
     originalContent = rows[0].content;
   });
 
+  afterEach(async () => {
+    if (originalContent) {
+      await query(
+        `UPDATE dalgo_prompts SET content = $1 WHERE key = 'tools_inventory'`,
+        [originalContent],
+      );
+    }
+  });
+
   it('updates the prompt AND appends a version row in one transaction', async () => {
     const versionsBefore = await query<{ n: number }>(
       `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'tools_inventory'`,
@@ -74,8 +84,6 @@ describe('PUT /api/admin/prompts/[key]', () => {
       `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'tools_inventory'`,
     );
     expect(versionsAfter.rows[0].n).toBe(versionsBefore.rows[0].n + 1);
-
-    await query(`UPDATE dalgo_prompts SET content = $1 WHERE key = 'tools_inventory'`, [originalContent]);
   });
 
   it('returns 400 for invalid body', async () => {
