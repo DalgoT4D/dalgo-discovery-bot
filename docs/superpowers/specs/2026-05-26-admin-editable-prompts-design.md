@@ -171,11 +171,9 @@ For the modal candidate list, we use `fused_top12` filtered to `source === 'kb'`
 2. **Pick candidate.** After POST returns candidates, render top KB candidates as a clickable list: question (first variant) · score · 1-line canonical_answer snippet. Plus a "None of these — skip fix" option that just closes (report still persisted).
 3. **Edit KB row inline.** Pre-filled `<KbEditForm>` for the selected entry. Save → `PUT /api/admin/kb/[id]` (re-embeds) → `PATCH /api/admin/wrong-answers/[id]` with `fixed_kb_id` → close + toast `"KB updated and re-embedded."`
 
-**`<KbEditForm>`** — extracted from existing `app/admin/kb/[id]/page.tsx`. Single component used by:
-- The KB detail page (`/admin/kb/[id]`)
-- Stage 3 of `<WrongAnswerModal>`
+**`<KbEditor>`** — already exists at `components/admin/kb-editor.tsx`. It already handles multiline `question_variants`, multiline `evidence`, status/category dropdowns, and the PATCH route already re-embeds on `question_variants` / `canonical_answer` changes. The "KB editor polish" item from `HANDOFF.md` is therefore already done.
 
-This extraction also folds in the queue item "#2 KB editor polish" from `HANDOFF.md`: ensure `question_variants` edits as multiline, `evidence` as URL list, `status` and `category` as dropdowns. Re-embed on save.
+To reuse it inside `<WrongAnswerModal>` we add a single optional `onSaved?: (item) => void` prop: when present, the editor calls it instead of `router.push('/admin/kb')`. No extraction needed.
 
 **Visual aesthetic.** Stick with the existing plain Tailwind look (slate sidebar, white panels). No new design system.
 
@@ -235,7 +233,7 @@ Admin clicks "⚠ This answer is wrong" on assistant message
 - `tests/lib/prompts.test.ts` — cache hit returns within TTL, expires after 60s, `invalidatePromptCache(key)` busts one entry, `invalidatePromptCache()` clears all, missing key throws.
 - `tests/api/admin/prompts.test.ts` — PUT writes both tables atomically (assert rollback if version insert fails), GET versions returns desc order, response shape matches.
 - `tests/api/admin/wrong-answers.test.ts` — POST snapshots the trace into `retrieval_trace_snap` (assert the snapshot doesn't change if the message is later edited), PATCH sets `fixed_kb_id`, candidates parsing handles missing-trace gracefully.
-- `tests/components/wrong-answer-modal.test.tsx` — stage transitions on each button, "skip fix" still leaves report persisted, error state on re-embed failure keeps modal open.
+- No React component unit test for `<WrongAnswerModal>` — the project's Vitest config is `environment: 'node'` and `@testing-library/react` is not installed. The modal's logic is mostly API-driven (API tests cover that); the React state-machine for stage transitions is verified in the manual smoke test below. Adding jsdom + RTL + jest-dom just for this one component isn't worth the dependency surface.
 
 **Eval:**
 
@@ -271,15 +269,13 @@ NEW   app/admin/prompts/[key]/page.tsx
 EDIT  app/admin/layout.tsx                    (add Prompts nav link)
 EDIT  app/admin/conversations/[id]/page.tsx   (third button + modal mount)
 
-NEW   components/admin/kb-edit-form.tsx       (extracted)
-EDIT  app/admin/kb/[id]/page.tsx              (use KbEditForm)
+EDIT  components/admin/kb-editor.tsx          (add optional onSaved prop for modal use)
 NEW   components/admin/wrong-answer-modal.tsx
 NEW   components/admin/diff-viewer.tsx        (line diff; tiny diff lib OK)
 
 NEW   tests/lib/prompts.test.ts
 NEW   tests/api/admin/prompts.test.ts
 NEW   tests/api/admin/wrong-answers.test.ts
-NEW   tests/components/wrong-answer-modal.test.tsx
 ```
 
 ## Build sequence
@@ -287,7 +283,7 @@ NEW   tests/components/wrong-answer-modal.test.tsx
 1. Schema + `scripts/migrations/001_prompts.sql` + seed (verify the live container picks it up)
 2. `lib/llm/prompts.ts` + refactor `staticSystem()` to async + fix eval runner; run `npm test` and a single eval case to confirm plumbing
 3. Admin API routes (prompts CRUD + wrong-answers)
-4. `<KbEditForm>` extraction from existing `/admin/kb/[id]`; verify the existing page still works
+4. Add `onSaved` callback prop to existing `components/admin/kb-editor.tsx`; verify `/admin/kb/[id]` still works
 5. `/admin/prompts` list + detail pages with diff modal
 6. `<WrongAnswerModal>` + button on conversation detail page
 7. Sidebar nav update
