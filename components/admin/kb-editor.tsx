@@ -16,6 +16,7 @@ const CATEGORIES = [
   'mission',
   'stack',
   'limitations',
+  'case_studies',
 ];
 
 type FormState = {

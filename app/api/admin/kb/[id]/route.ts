@@ -20,6 +20,7 @@ const KbPatch = z.object({
       'mission',
       'stack',
       'limitations',
+      'case_studies',
     ])
     .optional(),
   question_variants: z.array(z.string()).optional(),

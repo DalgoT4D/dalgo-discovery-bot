@@ -26,13 +26,18 @@ export function PromptEditor({ promptKey }: { promptKey: string }) {
   const [diffWith, setDiffWith] = useState<Version | null>(null);
 
   const reload = useCallback(async () => {
-    const [p, v] = await Promise.all([
-      fetch(`/api/admin/prompts/${promptKey}`).then((r) => r.json()),
-      fetch(`/api/admin/prompts/${promptKey}/versions`).then((r) => r.json()),
+    const [pr, vr] = await Promise.all([
+      fetch(`/api/admin/prompts/${promptKey}`),
+      fetch(`/api/admin/prompts/${promptKey}/versions`),
     ]);
+    if (!pr.ok) {
+      console.error('[PromptEditor] failed to load prompt', promptKey, pr.status);
+      return;
+    }
+    const [p, v] = await Promise.all([pr.json(), vr.ok ? vr.json() : Promise.resolve({ versions: [] })]);
     setPrompt(p.item);
     setDraft(p.item.content);
-    setVersions(v.versions);
+    setVersions(v.versions ?? []);
   }, [promptKey]);
 
   useEffect(() => {

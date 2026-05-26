@@ -19,6 +19,7 @@ const KbInput = z.object({
     'mission',
     'stack',
     'limitations',
+    'case_studies',
   ]),
   question_variants: z.array(z.string().min(1)).min(1),
   canonical_answer: z.string().min(1),

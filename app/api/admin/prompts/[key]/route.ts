@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { pool, query } from '@/lib/db/client';
+import { query, withClient } from '@/lib/db/client';
 import { invalidatePromptCache } from '@/lib/llm/prompts';
 import { z } from 'zod';
+
+type PromptRow = {
+  key: string;
+  content: string;
+  updated_by: string;
+  updated_at: string;
+};
 
 const PutBody = z.object({ content: z.string().min(1) });
 
@@ -33,37 +40,34 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ key:
 
   const email = session.user.email ?? 'unknown';
 
-  const client = await pool().connect();
-  try {
-    await client.query('BEGIN');
-    const upd = await client.query<{
-      key: string;
-      content: string;
-      updated_by: string;
-      updated_at: string;
-    }>(
-      `UPDATE dalgo_prompts
-          SET content = $1, updated_by = $2, updated_at = now()
-        WHERE key = $3
-        RETURNING key, content, updated_by, updated_at`,
-      [body.content, email, key],
-    );
-    if (!upd.rows[0]) {
+  const updated = await withClient<PromptRow | null>(async (client) => {
+    try {
+      await client.query('BEGIN');
+      const upd = await client.query<PromptRow>(
+        `UPDATE dalgo_prompts
+            SET content = $1, updated_by = $2, updated_at = now()
+          WHERE key = $3
+          RETURNING key, content, updated_by, updated_at`,
+        [body.content, email, key],
+      );
+      if (!upd.rows[0]) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      await client.query(
+        `INSERT INTO dalgo_prompt_versions (prompt_key, content, updated_by, updated_at)
+         VALUES ($1, $2, $3, $4)`,
+        [key, upd.rows[0].content, upd.rows[0].updated_by, upd.rows[0].updated_at],
+      );
+      await client.query('COMMIT');
+      return upd.rows[0];
+    } catch (e) {
       await client.query('ROLLBACK');
-      return NextResponse.json({ error: 'not found' }, { status: 404 });
+      throw e;
     }
-    await client.query(
-      `INSERT INTO dalgo_prompt_versions (prompt_key, content, updated_by, updated_at)
-       VALUES ($1, $2, $3, $4)`,
-      [key, upd.rows[0].content, upd.rows[0].updated_by, upd.rows[0].updated_at],
-    );
-    await client.query('COMMIT');
-    invalidatePromptCache(key);
-    return NextResponse.json({ item: upd.rows[0] });
-  } catch (e) {
-    await client.query('ROLLBACK');
-    throw e;
-  } finally {
-    client.release();
-  }
+  });
+
+  if (!updated) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  invalidatePromptCache(key);
+  return NextResponse.json({ item: updated });
 }
