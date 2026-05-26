@@ -30,6 +30,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 ) {
   return (
     <button
+      type="button"
       ref={ref}
       className={cn(
         'inline-flex items-center justify-center gap-2 font-medium transition-colors',
