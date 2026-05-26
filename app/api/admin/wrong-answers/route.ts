@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db/client';
 import { z } from 'zod';
+import type { Candidate } from '@/lib/admin/wrong-answer-types';
 
 const CreateBody = z.object({
   message_id: z.string().uuid(),
@@ -10,13 +11,6 @@ const CreateBody = z.object({
 
 type Trace = {
   fused_top12?: Array<{ id: string; score: number; source: string; preview?: string }>;
-};
-
-type Candidate = {
-  kb_id: string;
-  question: string;
-  snippet: string;
-  score: number;
 };
 
 async function parseCandidates(trace: Trace | null): Promise<Candidate[]> {

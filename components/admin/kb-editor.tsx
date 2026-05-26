@@ -51,8 +51,13 @@ export function KbEditor({
   useEffect(() => {
     if (isNew) return;
     fetch(`/api/admin/kb/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        if (!r.ok) {
+          console.error('[KbEditor] failed to load KB row', id, r.status);
+          setLoading(false);
+          return;
+        }
+        const d = await r.json();
         const it = d.item;
         setForm({
           category: it.category,
@@ -63,6 +68,10 @@ export function KbEditor({
           evidence: (it.evidence ?? []).join('\n'),
           notes_for_sales: it.notes_for_sales ?? '',
         });
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.error('[KbEditor] failed to load KB row', id, e);
         setLoading(false);
       });
   }, [id, isNew]);

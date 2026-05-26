@@ -1,13 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { KbEditor } from '@/components/admin/kb-editor';
-
-type Candidate = {
-  kb_id: string;
-  question: string;
-  snippet: string;
-  score: number;
-};
+import type { Candidate } from '@/lib/admin/wrong-answer-types';
 
 type Stage = 'reason' | 'pick' | 'edit' | 'no_trace';
 
@@ -49,11 +43,14 @@ export function WrongAnswerModal({
 
   async function patchFixed(kbId: string) {
     if (!reportId) return;
-    await fetch(`/api/admin/wrong-answers/${reportId}`, {
+    const res = await fetch(`/api/admin/wrong-answers/${reportId}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ fixed_kb_id: kbId }),
     });
+    if (!res.ok) {
+      console.error('[WrongAnswerModal] patchFixed failed', res.status);
+    }
   }
 
   return (
