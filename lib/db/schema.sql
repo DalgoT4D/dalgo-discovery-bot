@@ -236,3 +236,36 @@ ALTER TABLE dalgo_knowledge_base
 
 ALTER TABLE messages
   ADD COLUMN IF NOT EXISTS retrieval_trace jsonb;
+
+-- ============================================================
+-- Phase 4: Admin-editable prompts + wrong-answer reports (2026-05-26)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS dalgo_prompts (
+  key         text PRIMARY KEY,
+  content     text NOT NULL,
+  updated_by  text NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS dalgo_prompt_versions (
+  id          bigserial PRIMARY KEY,
+  prompt_key  text NOT NULL REFERENCES dalgo_prompts(key) ON DELETE CASCADE,
+  content     text NOT NULL,
+  updated_by  text NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS prompt_versions_key_idx
+  ON dalgo_prompt_versions (prompt_key, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS wrong_answer_reports (
+  id                   bigserial PRIMARY KEY,
+  message_id           uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  reason               text NOT NULL,
+  retrieval_trace_snap jsonb,
+  fixed_kb_id          uuid REFERENCES dalgo_knowledge_base(id) ON DELETE SET NULL,
+  reported_by          text NOT NULL,
+  reported_at          timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS wrong_answer_reports_msg_idx
+  ON wrong_answer_reports (message_id);
