@@ -45,13 +45,12 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
-    font-family: var(--font-anek-latin), system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    @apply bg-background text-foreground antialiased font-sans;
   }
 }
 
 /* Blinking caret used by the streaming Markdown component */
-@keyframes caret-blink {
+@keyframes streaming-caret-blink {
   0%, 50%   { opacity: 1; }
   50.01%, 100% { opacity: 0; }
 }
@@ -62,7 +61,7 @@
   vertical-align: text-bottom;
   background-color: var(--primary);
   margin-left: 2px;
-  animation: caret-blink 1s steps(1) infinite;
+  animation: streaming-caret-blink 1s steps(1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
