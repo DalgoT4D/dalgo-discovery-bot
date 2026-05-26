@@ -28,7 +28,13 @@ type FormState = {
   notes_for_sales: string;
 };
 
-export function KbEditor({ id }: { id: string }) {
+export function KbEditor({
+  id,
+  onSaved,
+}: {
+  id: string;
+  onSaved?: (item: any) => void;
+}) {
   const isNew = id === 'new';
   const router = useRouter();
   const [loading, setLoading] = useState(!isNew);
@@ -83,8 +89,16 @@ export function KbEditor({ id }: { id: string }) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (res.ok) router.push('/admin/kb');
-    else alert('Save failed');
+    if (res.ok) {
+      if (onSaved) {
+        const data = await res.json();
+        onSaved(data.item);
+      } else {
+        router.push('/admin/kb');
+      }
+    } else {
+      alert('Save failed');
+    }
   }
 
   async function remove() {
