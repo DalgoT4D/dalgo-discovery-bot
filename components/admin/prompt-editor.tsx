@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DiffViewer } from '@/components/admin/diff-viewer';
 
 type Prompt = {
@@ -25,7 +25,7 @@ export function PromptEditor({ promptKey }: { promptKey: string }) {
   const [toast, setToast] = useState<string | null>(null);
   const [diffWith, setDiffWith] = useState<Version | null>(null);
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const [p, v] = await Promise.all([
       fetch(`/api/admin/prompts/${promptKey}`).then((r) => r.json()),
       fetch(`/api/admin/prompts/${promptKey}/versions`).then((r) => r.json()),
@@ -33,27 +33,41 @@ export function PromptEditor({ promptKey }: { promptKey: string }) {
     setPrompt(p.item);
     setDraft(p.item.content);
     setVersions(v.versions);
-  }
+  }, [promptKey]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload();
-  }, [promptKey]);
+  }, [reload]);
+
+  useEffect(() => {
+    if (!diffWith) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDiffWith(null);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [diffWith]);
 
   async function save() {
     if (!prompt) return;
     setSaving(true);
-    const res = await fetch(`/api/admin/prompts/${promptKey}`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ content: draft }),
-    });
-    setSaving(false);
-    if (res.ok) {
-      setToast('Saved. Takes effect within 60 seconds.');
-      await reload();
-      setTimeout(() => setToast(null), 4000);
-    } else {
+    try {
+      const res = await fetch(`/api/admin/prompts/${promptKey}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content: draft }),
+      });
+      if (res.ok) {
+        setToast('Saved. Takes effect within 60 seconds.');
+        await reload();
+      } else {
+        setToast('Save failed.');
+      }
+    } catch {
       setToast('Save failed.');
+    } finally {
+      setSaving(false);
       setTimeout(() => setToast(null), 4000);
     }
   }

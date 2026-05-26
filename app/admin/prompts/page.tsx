@@ -1,21 +1,6 @@
 import Link from 'next/link';
 import { query } from '@/lib/db/client';
-
-const SECTION_TITLES: Record<string, string> = {
-  intro_and_rules: 'Intro & Rules',
-  tools_inventory: 'Tools Inventory',
-  consultant_mode: 'Consultant Mode',
-  dalgo_vs_3rd_party: 'Dalgo vs 3rd-Party Boundary',
-  fit_assessment: 'Fit Assessment Mode',
-};
-
-const ORDER = [
-  'intro_and_rules',
-  'tools_inventory',
-  'consultant_mode',
-  'dalgo_vs_3rd_party',
-  'fit_assessment',
-];
+import { PROMPT_SECTION_TITLES, PROMPT_SECTION_ORDER } from '@/lib/admin/prompt-sections';
 
 type Row = {
   key: string;
@@ -29,7 +14,7 @@ export default async function PromptsListPage() {
     `SELECT key, content, updated_by, updated_at FROM dalgo_prompts`,
   );
   const byKey = new Map(rows.map((r) => [r.key, r]));
-  const ordered = ORDER.map((k) => byKey.get(k)).filter((r): r is Row => Boolean(r));
+  const ordered = PROMPT_SECTION_ORDER.map((k) => byKey.get(k)).filter((r): r is Row => Boolean(r));
 
   return (
     <div className="space-y-4">
@@ -48,7 +33,7 @@ export default async function PromptsListPage() {
             <Link href={`/admin/prompts/${p.key}`} className="block space-y-2">
               <div className="flex items-baseline justify-between">
                 <h3 className="font-medium text-slate-900">
-                  {SECTION_TITLES[p.key] ?? p.key}
+                  {PROMPT_SECTION_TITLES[p.key] ?? p.key}
                 </h3>
                 <span className="text-xs text-slate-500">
                   {new Date(p.updated_at).toLocaleString()} · {p.updated_by}
