@@ -34,10 +34,23 @@ export const dashboards: KbSeed[] = [
     category: 'dashboards',
     question_variants: ['Are there scatter plots / treemaps / sankey diagrams / heatmaps?'],
     canonical_answer:
-      'Not in v2. Current chart palette is 6 types (bar/line/pie/number/table/map). Suggest workaround via embedded Superset for advanced visuals.',
+      'Dalgo Native\'s chart palette is 6 core types: bar, line, pie, number/KPI card, table, and choropleth map. Scatter / treemap / sankey / heatmap are not in Dalgo Native. NGOs that need richer visuals can use the Superset add-on (a separate Dalgo offering at ₹48,000/year that ships 40+ chart types) or point their own BI tool (Power BI, Looker, Tableau) at the Dalgo warehouse.',
     status: 'no',
     evidence: ['webapp_v2/components/charts/ — no scatter/treemap/sankey found'],
     source_audit_date: '2026-05-21',
+  },
+  {
+    category: 'dashboards',
+    question_variants: [
+      'Does Dalgo have native dashboards?',
+      'Can I build dashboards inside Dalgo without a 3rd-party tool?',
+      'What dashboards does Dalgo ship?',
+    ],
+    canonical_answer:
+      'Yes — Dalgo ships a native dashboard builder inside the Dalgo product itself. Drag-and-drop canvas with a 12-column responsive grid; 6 chart types (bar, line, pie, KPI/number cards, tables with drill-down, choropleth maps); filters by program/state/time; native sharing via public read-only tokens; embedding supported. NGO M&E teams build and edit dashboards without technical help. For richer visualization (40+ chart types, advanced RLS, complex calculations) you can additionally use the Superset add-on (₹48,000/year, hosted by Dalgo) or point Power BI / Looker / Tableau at your Dalgo warehouse.',
+    status: 'yes',
+    evidence: [],
+    source_audit_date: '2026-05-25',
   },
   {
     category: 'dashboards',
