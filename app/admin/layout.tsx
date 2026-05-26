@@ -22,6 +22,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link className="block hover:underline" href="/admin/kb">
           Knowledge Base
         </Link>
+        <Link className="block hover:underline" href="/admin/prompts">
+          Prompts
+        </Link>
         <Link className="block hover:underline" href="/admin/blogs">
           Blogs
         </Link>
