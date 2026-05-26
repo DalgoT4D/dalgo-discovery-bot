@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { PromoteModal } from '@/components/admin/promote-modal';
 import { RetrievalDebugPanel } from '@/components/admin/retrieval-debug-panel';
+import { WrongAnswerModal } from '@/components/admin/wrong-answer-modal';
 
 type MessageRow = {
   id: string;
@@ -23,6 +24,7 @@ export default function ConversationDetailPage() {
   );
   const [promoteFor, setPromoteFor] = useState<{ messageId: string; userMsgText: string; asstMsgText: string } | null>(null);
   const [debugFor, setDebugFor] = useState<string | null>(null);
+  const [wrongFor, setWrongFor] = useState<string | null>(null);
 
   const messages = data?.messages ?? [];
   const findPrevUserText = (idx: number): string => {
@@ -61,6 +63,10 @@ export default function ConversationDetailPage() {
                 className="text-slate-600 underline"
                 onClick={() => setDebugFor(m.id)}
               >👁 View retrieval debug</button>
+              <button
+                className="text-red-600 underline"
+                onClick={() => setWrongFor(m.id)}
+              >⚠ This answer is wrong</button>
             </div>
           )}
         </div>
@@ -76,6 +82,9 @@ export default function ConversationDetailPage() {
       )}
       {debugFor && (
         <RetrievalDebugPanel messageId={debugFor} onClose={() => setDebugFor(null)} />
+      )}
+      {wrongFor && (
+        <WrongAnswerModal messageId={wrongFor} onClose={() => setWrongFor(null)} />
       )}
     </div>
   );
