@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Card } from '@/components/ui/card';
 
 export function ProgressIngest({
   sessionId,
@@ -31,9 +32,29 @@ export function ProgressIngest({
     };
   }, [sessionId, onReady]);
 
+  // 1.5s per poll, so > 4 tries ≈ > 6s elapsed → switch the sub-line.
+  const slow = tries > 4;
+
   return (
-    <div className="text-center py-8 text-slate-500">
-      Learning about your NGO… {tries > 0 && `(${tries}s)`}
+    <div className="flex h-full items-center justify-center px-4">
+      <Card className="w-full max-w-sm px-5 py-4">
+        <div className="flex items-center gap-3">
+          <span
+            className="inline-block h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary"
+            style={{ animation: 'spin 0.8s linear infinite' }}
+            aria-hidden
+          />
+          <p className="text-[15px] font-medium text-foreground">Learning about your NGO…</p>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground animate-in fade-in duration-500" key={slow ? 'slow' : 'fast'}>
+          {slow ? 'Almost there…' : 'This usually takes a few seconds.'}
+        </p>
+      </Card>
+      <style jsx>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
