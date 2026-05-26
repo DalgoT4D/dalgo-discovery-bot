@@ -6,6 +6,7 @@ interface Props {
   initialQuestion: string;
   initialAnswer: string;
   onClose: () => void;
+  source?: 'promoted_from_conversation' | 'promoted_from_unanswered';
 }
 
 const CATEGORIES = [
@@ -14,7 +15,7 @@ const CATEGORIES = [
   'pricing','mission','stack','limitations','case_studies',
 ];
 
-export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClose }: Props) {
+export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClose, source }: Props) {
   const [questionVariants, setQuestionVariants] = useState(initialQuestion);
   const [answer, setAnswer] = useState(initialAnswer);
   const [category, setCategory] = useState('case_studies');
@@ -34,7 +35,7 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
         status,
         evidence: evidence.split('\n').map((s) => s.trim()).filter(Boolean),
         sourceMessageId: messageId,
-        source: 'promoted_from_conversation',
+        source: source ?? 'promoted_from_conversation',
       }),
     });
     setSaving(false);
