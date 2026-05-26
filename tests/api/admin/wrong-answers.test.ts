@@ -14,8 +14,9 @@ function req(url: string, init?: RequestInit): any {
   return new Request(url, init);
 }
 
+let sessionId: string;
+
 describe('POST /api/admin/wrong-answers', () => {
-  let sessionId: string;
   let messageId: string;
   let kbId: string;
 
@@ -32,8 +33,8 @@ describe('POST /api/admin/wrong-answers', () => {
       hyde: 'h',
       candidates: { kb: [{ id: kbId, preview: 'p' }], patterns: [], blogs: [] },
       fused_top12: [
-        { id: kbId, score: 0.9, source: 'kb', preview: 'top kb candidate' },
-        { id: 'fake-pattern-id', score: 0.5, source: 'pattern', preview: 'pat' },
+        { id: kbId, score: 0.9, source: 'kb_curated', preview: 'top kb candidate' },
+        { id: 'fake-pattern-id', score: 0.5, source: 'pattern_curated', preview: 'pat' },
       ],
       rerank_scores: [],
       final_context_ids: [kbId],
@@ -114,4 +115,7 @@ describe('PATCH /api/admin/wrong-answers/[id]', () => {
   });
 });
 
-afterAll(async () => { await pool().end(); });
+afterAll(async () => {
+  await query(`DELETE FROM sessions WHERE id = $1`, [sessionId]);
+  await pool().end();
+});

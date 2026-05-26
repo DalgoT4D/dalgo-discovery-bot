@@ -21,28 +21,33 @@ type Candidate = {
 
 async function parseCandidates(trace: Trace | null): Promise<Candidate[]> {
   if (!trace?.fused_top12) return [];
-  const kbCandidates = trace.fused_top12.filter((c) => c.source === 'kb').slice(0, 5);
+  const kbCandidates = trace.fused_top12.filter((c) => c.source === 'kb_curated').slice(0, 5);
   if (kbCandidates.length === 0) return [];
   const ids = kbCandidates.map((c) => c.id);
-  const { rows } = await query<{ id: string; question_variants: string[]; canonical_answer: string }>(
-    `SELECT id, question_variants, canonical_answer
-       FROM dalgo_knowledge_base
-      WHERE id = ANY($1::uuid[])`,
-    [ids],
-  );
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return kbCandidates
-    .map((c) => {
-      const row = byId.get(c.id);
-      if (!row) return null;
-      return {
-        kb_id: c.id,
-        question: row.question_variants?.[0] ?? '(no question variant)',
-        snippet: (row.canonical_answer ?? '').slice(0, 140),
-        score: c.score,
-      };
-    })
-    .filter((x): x is Candidate => x !== null);
+  try {
+    const { rows } = await query<{ id: string; question_variants: string[]; canonical_answer: string }>(
+      `SELECT id, question_variants, canonical_answer
+         FROM dalgo_knowledge_base
+        WHERE id = ANY($1::uuid[])`,
+      [ids],
+    );
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    return kbCandidates
+      .map((c) => {
+        const row = byId.get(c.id);
+        if (!row) return null;
+        return {
+          kb_id: c.id,
+          question: row.question_variants?.[0] ?? '(no question variant)',
+          snippet: (row.canonical_answer ?? '').slice(0, 140),
+          score: c.score,
+        };
+      })
+      .filter((x): x is Candidate => x !== null);
+  } catch (e) {
+    console.error('[wrong-answers] parseCandidates query failed', e);
+    return [];
+  }
 }
 
 export async function POST(req: NextRequest) {
