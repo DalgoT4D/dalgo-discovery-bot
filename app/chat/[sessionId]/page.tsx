@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ChatStream, type ChatStreamHandle } from '@/components/chat-stream';
 import { ProgressIngest } from '@/components/progress-ingest';
+import { SiteHeader } from '@/components/site-header';
 
 export default function ChatPage() {
   const params = useParams<{ sessionId: string }>();
@@ -24,13 +25,8 @@ export default function ChatPage() {
   }, [ready, sessionId]);
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
-      <header className="border-b bg-white px-4 py-3">
-        <h1 className="text-lg font-semibold text-slate-900">Dalgo Discovery</h1>
-        <p className="text-xs text-slate-500">
-          Ask anything about Dalgo — I&apos;ll ground my answers in real product capabilities.
-        </p>
-      </header>
+    <div className="flex h-screen flex-col bg-background">
+      <SiteHeader variant="chat" sessionLive={ready} />
       <main className="flex-1 overflow-hidden">
         {!ready && <ProgressIngest sessionId={sessionId} onReady={() => setReady(true)} />}
         {ready && (
