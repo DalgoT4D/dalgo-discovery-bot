@@ -61,7 +61,7 @@ export async function runLegacyOne(c: LegacyEvalCase): Promise<EvalResult> {
   });
   const result = await generateText({
     model: anthropic(MODEL),
-    system: buildSystemPrompt({
+    system: await buildSystemPrompt({
       ngo_summary: null,
       ngo_systems: c.ngoContext?.ngo_systems ?? null,
       data_types: c.ngoContext?.data_types ?? null,
@@ -151,7 +151,7 @@ async function synthesizeAnswer(
   c: EvalCase,
   topPassages: { text: string }[],
 ): Promise<string> {
-  const augmented = `${staticSystem()}\n\n## Retrieved context for this turn\n${topPassages
+  const augmented = `${await staticSystem()}\n\n## Retrieved context for this turn\n${topPassages
     .map((p) => p.text)
     .join('\n\n---\n\n')}`;
   const { text } = await generateText({

@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
   const systemMessages: CoreMessage[] = [
     {
       role: 'system',
-      content: staticSystem(),
+      content: await staticSystem(),
       providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
