@@ -16,10 +16,10 @@ function req(url: string, init?: RequestInit): any {
 }
 
 describe('GET /api/admin/prompts', () => {
-  it('returns all 5 prompts', async () => {
+  it('returns all 6 prompts', async () => {
     const res = await listGet(req('http://t/api/admin/prompts') as any);
     const json = await res.json();
-    expect(json.items.length).toBe(5);
+    expect(json.items.length).toBe(6);
     expect(json.items[0]).toHaveProperty('key');
     expect(json.items[0]).toHaveProperty('content');
     expect(json.items[0]).toHaveProperty('updated_at');
@@ -28,11 +28,11 @@ describe('GET /api/admin/prompts', () => {
 
 describe('GET /api/admin/prompts/[key]', () => {
   it('returns one prompt', async () => {
-    const res = await oneGet(req('http://t/api/admin/prompts/intro_and_rules') as any, {
-      params: Promise.resolve({ key: 'intro_and_rules' }),
+    const res = await oneGet(req('http://t/api/admin/prompts/identity') as any, {
+      params: Promise.resolve({ key: 'identity' }),
     });
     const json = await res.json();
-    expect(json.item.key).toBe('intro_and_rules');
+    expect(json.item.key).toBe('identity');
     expect(json.item.content).toContain('Dalgo Discovery Assistant');
   });
 
@@ -114,8 +114,8 @@ describe('PUT /api/admin/prompts/[key]', () => {
 describe('GET /api/admin/prompts/[key]/versions', () => {
   it('returns history descending by updated_at', async () => {
     const res = await versionsGet(
-      req('http://t/api/admin/prompts/intro_and_rules/versions') as any,
-      { params: Promise.resolve({ key: 'intro_and_rules' }) },
+      req('http://t/api/admin/prompts/identity/versions') as any,
+      { params: Promise.resolve({ key: 'identity' }) },
     );
     const json = await res.json();
     expect(Array.isArray(json.versions)).toBe(true);

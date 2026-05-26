@@ -241,6 +241,9 @@ ALTER TABLE messages
 -- Phase 4: Admin-editable prompts + wrong-answer reports (2026-05-26)
 -- ============================================================
 
+-- Note: seed migrations 001 + 002 populate 6 sections: identity, tools_inventory,
+-- rules, consultant_mode, dalgo_vs_3rd_party, fit_assessment. See scripts/migrations/.
+
 CREATE TABLE IF NOT EXISTS dalgo_prompts (
   key         text PRIMARY KEY,
   content     text NOT NULL,

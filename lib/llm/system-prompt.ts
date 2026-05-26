@@ -1,14 +1,15 @@
 import { getPrompt } from '@/lib/llm/prompts';
 
 export async function staticSystem(): Promise<string> {
-  const [intro, tools, consultant, boundary, fit] = await Promise.all([
-    getPrompt('intro_and_rules'),
+  const [identity, tools, rules, consultant, boundary, fit] = await Promise.all([
+    getPrompt('identity'),
     getPrompt('tools_inventory'),
+    getPrompt('rules'),
     getPrompt('consultant_mode'),
     getPrompt('dalgo_vs_3rd_party'),
     getPrompt('fit_assessment'),
   ]);
-  return [intro, tools, consultant, boundary, fit].join('\n\n');
+  return [identity, tools, rules, consultant, boundary, fit].join('\n\n');
 }
 
 export function ngoContextBlock(opts: {
