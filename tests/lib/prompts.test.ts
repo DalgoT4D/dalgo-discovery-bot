@@ -22,22 +22,22 @@ describe('getPrompt', () => {
 
   it('serves from cache within TTL', async () => {
     await getPrompt('intro_and_rules');
-    const statsBefore = __cacheStatsForTests();
+    const firstFetched = __cacheStatsForTests().entries['intro_and_rules'];
     await getPrompt('intro_and_rules');
-    const statsAfter = __cacheStatsForTests();
-    expect(statsAfter.size).toBe(1);
-    expect(statsAfter.lastFetchedAt).toBe(statsBefore.lastFetchedAt);
+    const secondFetched = __cacheStatsForTests().entries['intro_and_rules'];
+    expect(__cacheStatsForTests().size).toBe(1);
+    expect(secondFetched).toBe(firstFetched);
   });
 
   it('refetches after TTL expiry', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-26T10:00:00Z'));
     await getPrompt('intro_and_rules');
-    const firstFetched = __cacheStatsForTests().lastFetchedAt;
+    const firstFetched = __cacheStatsForTests().entries['intro_and_rules'];
 
     vi.setSystemTime(new Date('2026-05-26T10:01:01Z')); // +61s
     await getPrompt('intro_and_rules');
-    const secondFetched = __cacheStatsForTests().lastFetchedAt;
+    const secondFetched = __cacheStatsForTests().entries['intro_and_rules'];
 
     expect(secondFetched).toBeGreaterThan(firstFetched);
   });

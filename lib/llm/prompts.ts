@@ -5,8 +5,11 @@ const TTL_MS = 60_000;
 type CacheEntry = { content: string; fetchedAt: number };
 const cache = new Map<string, CacheEntry>();
 let version = 0;
-let lastFetchedAt = 0;
 
+// Cache-miss stampede note: concurrent calls for the same key on a cold
+// cache may each issue a SELECT and overwrite each other's entry. This is
+// safe (idempotent writes, same DB row) and acceptable at the expected
+// admin/chat request rate, so we don't promise-coalesce.
 export async function getPrompt(key: string): Promise<string> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.fetchedAt < TTL_MS) {
@@ -21,7 +24,6 @@ export async function getPrompt(key: string): Promise<string> {
   }
   const fetchedAt = Date.now();
   cache.set(key, { content: rows[0].content, fetchedAt });
-  lastFetchedAt = fetchedAt;
   return rows[0].content;
 }
 
@@ -35,13 +37,18 @@ export function invalidatePromptCache(key?: string): void {
 export function __resetForTests(): void {
   cache.clear();
   version = 0;
-  lastFetchedAt = 0;
 }
 
 export function __cacheStatsForTests(): {
   size: number;
   version: number;
-  lastFetchedAt: number;
+  entries: Record<string, number>; // key -> fetchedAt
 } {
-  return { size: cache.size, version, lastFetchedAt };
+  return {
+    size: cache.size,
+    version,
+    entries: Object.fromEntries(
+      [...cache.entries()].map(([k, v]) => [k, v.fetchedAt]),
+    ),
+  };
 }
