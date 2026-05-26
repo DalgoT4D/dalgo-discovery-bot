@@ -215,24 +215,38 @@ export async function runOne(c: EvalCase): Promise<RunResult> {
   };
 }
 
+// Run all cases with bounded concurrency. Each case fires ~5-7 Claude API
+// calls (HyDE + reranker + synthesis + 3-judge ensemble), so we cap
+// in-flight workers to stay well under Anthropic per-minute caps while
+// still amortizing the per-call latency.
+const EVAL_CONCURRENCY = Number(process.env.EVAL_CONCURRENCY ?? 5);
+
 export async function runAll(): Promise<RunResult[]> {
-  const out: RunResult[] = [];
-  for (const c of ALL) {
-    try {
-      const r = await runOne(c);
-      out.push(r);
-      // eslint-disable-next-line no-console
-      console.log(`${r.pass ? 'PASS' : 'FAIL'} ${c.id} (${c.bucket})`);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(`FAIL ${c.id} ERROR:`, e);
-      out.push({
-        id: c.id,
-        bucket: c.bucket,
-        pass: false,
-        judgeResults: [{ pass: false, notes: `runOne threw: ${String(e)}` }],
-      });
+  const out: RunResult[] = new Array(ALL.length);
+  let next = 0;
+  async function worker() {
+    while (true) {
+      const i = next++;
+      if (i >= ALL.length) return;
+      const c = ALL[i];
+      try {
+        const r = await runOne(c);
+        out[i] = r;
+        // eslint-disable-next-line no-console
+        console.log(`${r.pass ? 'PASS' : 'FAIL'} ${c.id} (${c.bucket})`);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(`FAIL ${c.id} ERROR:`, e);
+        out[i] = {
+          id: c.id,
+          bucket: c.bucket,
+          pass: false,
+          judgeResults: [{ pass: false, notes: `runOne threw: ${String(e)}` }],
+        };
+      }
     }
   }
+  const workers = Array.from({ length: EVAL_CONCURRENCY }, worker);
+  await Promise.all(workers);
   return out;
 }
