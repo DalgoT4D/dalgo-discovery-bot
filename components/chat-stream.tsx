@@ -161,7 +161,10 @@ export const ChatStream = forwardRef<
               onClick={() => append({ role: 'user', content: FIT_ASSESSMENT_PROMPT })}
               className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary text-base">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary text-base"
+              >
                 ⌖
               </span>
               <span className="flex flex-col">
