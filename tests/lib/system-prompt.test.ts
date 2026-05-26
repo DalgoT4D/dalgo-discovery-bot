@@ -20,9 +20,13 @@ describe('staticSystem (async, DB-backed)', () => {
 
   it('reflects DB edits on the next call after invalidation', async () => {
     const { invalidatePromptCache } = await import('@/lib/llm/prompts');
-    const original = await query<{ content: string }>(
+    const { rows } = await query<{ content: string }>(
       `SELECT content FROM dalgo_prompts WHERE key = 'intro_and_rules'`,
     );
+    if (!rows[0]) {
+      throw new Error("Seed row 'intro_and_rules' missing — apply scripts/migrations/001_prompts.sql");
+    }
+    const originalContent = rows[0].content;
     try {
       await query(
         `UPDATE dalgo_prompts SET content = $1, updated_by = 'test', updated_at = now()
@@ -35,7 +39,7 @@ describe('staticSystem (async, DB-backed)', () => {
     } finally {
       await query(
         `UPDATE dalgo_prompts SET content = $1 WHERE key = 'intro_and_rules'`,
-        [original.rows[0].content],
+        [originalContent],
       );
       invalidatePromptCache('intro_and_rules');
     }

@@ -27,9 +27,7 @@ export function ngoContextBlock(opts: {
 export async function buildSystemPrompt(
   opts: Parameters<typeof ngoContextBlock>[0],
 ): Promise<string> {
-  const [staticPart, ngo] = await Promise.all([
-    staticSystem(),
-    Promise.resolve(ngoContextBlock(opts)),
-  ]);
+  const staticPart = await staticSystem();
+  const ngo = ngoContextBlock(opts);
   return ngo ? `${staticPart}\n\n${ngo}` : staticPart;
 }
