@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
-export default function SignInPage() {
+function SigninInner() {
   const params = useSearchParams();
   const callbackUrl = params.get('callbackUrl') || '/admin';
   const err = params.get('error');
@@ -65,5 +65,19 @@ export default function SignInPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SigninPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-slate-500">
+          Loading…
+        </div>
+      }
+    >
+      <SigninInner />
+    </Suspense>
   );
 }
