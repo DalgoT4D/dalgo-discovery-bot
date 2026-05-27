@@ -73,7 +73,7 @@ npm run admin:hash         # bcrypt-hash a password for the Credentials admin lo
 - **Next.js 16** App Router + React 19 + TypeScript. See `AGENTS.md` — this is not the Next.js in your training data; read `node_modules/next/dist/docs/` before writing framework code.
 - **Tailwind v4** — PostCSS-only config, no `tailwind.config.ts`.
 - `next.config.ts` pins the Turbopack `root` to this project so it doesn't scan the whole `Dalgo/` workspace (which caused 30s+ compiles).
-- **`@supabase/*` packages remain in package.json but are unused** (DB access is via `pg`) — slated for cleanup.
+- DB access is via raw `pg` Pool — no Supabase client, no ORM.
 - Path alias `@/*` maps to the project root.
 
 ## Project journal
