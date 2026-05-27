@@ -5,7 +5,6 @@ import { MessageBubble } from './message-bubble';
 import { Markdown } from './markdown';
 import { SoftCtaBanner } from './soft-cta-banner';
 import { TypingIndicator } from './typing-indicator';
-import { Card } from '@/components/ui/card';
 import { cn } from '@/components/ui/cn';
 
 interface ToolInvocationPart {
@@ -52,6 +51,33 @@ export interface ChatStreamHandle {
 const FIT_ASSESSMENT_PROMPT =
   "Walk me through a quick fit assessment — ask me one question at a time about our work, then give me your honest verdict on whether Dalgo fits us.";
 
+const PROMPT_CARDS: Array<{ icon: string; title: string; sub: string; prompt: string }> = [
+  {
+    icon: '📊',
+    title: 'What is Dalgo?',
+    sub: 'A quick overview of the platform',
+    prompt: 'Give me a short overview of what Dalgo is and what it does.',
+  },
+  {
+    icon: '💰',
+    title: 'Pricing for NGOs',
+    sub: 'How costs scale with your org size',
+    prompt: 'How is Dalgo priced for NGOs of different sizes?',
+  },
+  {
+    icon: '🎯',
+    title: 'Is Dalgo for us?',
+    sub: '5-minute fit check',
+    prompt: FIT_ASSESSMENT_PROMPT,
+  },
+  {
+    icon: '🔌',
+    title: 'Connect your data',
+    sub: 'Which sources Dalgo supports',
+    prompt: 'Which data sources does Dalgo connect to?',
+  },
+];
+
 const chipBase =
   'inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20';
 
@@ -59,10 +85,8 @@ export const ChatStream = forwardRef<
   ChatStreamHandle,
   {
     sessionId: string;
-    greeting?: string;
-    starters?: string[];
   }
->(function ChatStream({ sessionId, greeting, starters = [] }, ref) {
+>(function ChatStream({ sessionId }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     experimental_prepareRequestBody: ({ messages }) => {
@@ -98,8 +122,6 @@ export const ChatStream = forwardRef<
       ? extractSuggestedReplies(lastMsg.parts as MessagePart[] | undefined)
       : [];
 
-  // Show typing indicator when waiting for first token, OR when streaming but
-  // the latest assistant message has no text yet.
   const lastAssistantText = lastIsAssistant
     ? partsToText(lastMsg.parts as MessagePart[] | undefined)
     : '';
@@ -108,42 +130,68 @@ export const ChatStream = forwardRef<
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col">
       <div className="flex-1 overflow-y-auto px-4 pb-2">
-        {showIntro && greeting && (
-          <MessageBubble role="assistant">
-            <Markdown text={greeting} />
-          </MessageBubble>
-        )}
-        {messages.map((m, idx) => {
-          const text =
-            typeof m.content === 'string' ? m.content : partsToText(m.parts as MessagePart[]);
-          const role = m.role === 'user' ? 'user' : 'assistant';
-          if (!text) return null;
-          const isLastAssistant = role === 'assistant' && idx === messages.length - 1;
-          return (
-            <MessageBubble key={m.id} role={role}>
-              {role === 'assistant' ? (
-                <Markdown text={text} streaming={isStreaming && isLastAssistant} />
-              ) : (
-                <span className="whitespace-pre-wrap">{text}</span>
-              )}
-            </MessageBubble>
-          );
-        })}
-        {showTyping && <TypingIndicator />}
-
-        {suggestedReplies.length > 0 && (
-          <div className="mb-4 ml-11 flex flex-wrap gap-2">
-            {suggestedReplies.map((s, i) => (
-              <button
-                key={`${i}-${s}`}
-                type="button"
-                onClick={() => append({ role: 'user', content: s })}
-                className={chipBase}
-              >
-                {s}
-              </button>
-            ))}
+        {showIntro ? (
+          <div className="flex flex-col items-center pt-16 sm:pt-24">
+            {/* Brand hero */}
+            <span className="relative inline-flex h-12 w-12 items-center justify-center">
+              <span aria-hidden className="absolute inset-0 rounded-full bg-primary/15" />
+              <span aria-hidden className="relative h-9 w-9 rounded-full bg-primary" />
+            </span>
+            <h2 className="mt-4 text-center text-2xl font-medium tracking-tight text-foreground">
+              How can Dalgo help your NGO today?
+            </h2>
+            <div className="mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+              {PROMPT_CARDS.map((card) => (
+                <button
+                  key={card.title}
+                  type="button"
+                  onClick={() => append({ role: 'user', content: card.prompt })}
+                  className="rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <span className="text-lg" aria-hidden>
+                    {card.icon}
+                  </span>
+                  <div className="mt-2 text-[15px] font-semibold text-foreground">{card.title}</div>
+                  <div className="mt-0.5 text-sm text-muted-foreground">{card.sub}</div>
+                </button>
+              ))}
+            </div>
           </div>
+        ) : (
+          <>
+            {messages.map((m, idx) => {
+              const text =
+                typeof m.content === 'string' ? m.content : partsToText(m.parts as MessagePart[]);
+              const role = m.role === 'user' ? 'user' : 'assistant';
+              if (!text) return null;
+              const isLastAssistant = role === 'assistant' && idx === messages.length - 1;
+              return (
+                <MessageBubble key={m.id} role={role}>
+                  {role === 'assistant' ? (
+                    <Markdown text={text} streaming={isStreaming && isLastAssistant} />
+                  ) : (
+                    <span className="whitespace-pre-wrap">{text}</span>
+                  )}
+                </MessageBubble>
+              );
+            })}
+            {showTyping && <TypingIndicator />}
+
+            {suggestedReplies.length > 0 && (
+              <div className="mb-4 ml-11 flex flex-wrap gap-2">
+                {suggestedReplies.map((s, i) => (
+                  <button
+                    key={`${i}-${s}`}
+                    type="button"
+                    onClick={() => append({ role: 'user', content: s })}
+                    className={chipBase}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -153,52 +201,11 @@ export const ChatStream = forwardRef<
         </div>
       )}
 
-      {showIntro && (
-        <div className="space-y-3 px-4 pb-2">
-          <Card className="border-l-[3px] border-l-primary">
-            <button
-              type="button"
-              onClick={() => append({ role: 'user', content: FIT_ASSESSMENT_PROMPT })}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
-            >
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary text-base"
-              >
-                ⌖
-              </span>
-              <span className="flex flex-col">
-                <span className="text-[15px] font-medium text-foreground">
-                  Not sure what to ask?
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  Let me walk you through a fit assessment.
-                </span>
-              </span>
-            </button>
-          </Card>
-          {starters.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {starters.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => append({ role: 'user', content: s })}
-                  className={chipBase}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="px-4 pb-4 pt-2">
+      <form onSubmit={handleSubmit} className="px-4 pb-6 pt-2">
         <div
           className={cn(
-            'relative flex items-center rounded-xl border border-border bg-card shadow-sm',
-            'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
+            'relative flex items-center rounded-3xl border border-border bg-card shadow-sm transition-shadow',
+            'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background hover:shadow-md',
             isBusy && 'opacity-60',
           )}
         >
@@ -206,7 +213,7 @@ export const ChatStream = forwardRef<
             value={input}
             onChange={handleInputChange}
             placeholder="Ask anything about Dalgo…"
-            className="flex-1 bg-transparent px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="flex-1 bg-transparent px-5 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none"
             disabled={isBusy}
           />
           <button
@@ -214,19 +221,31 @@ export const ChatStream = forwardRef<
             disabled={isBusy || !input.trim()}
             aria-label="Send"
             className={cn(
-              'mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full',
+              'mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full',
               'bg-primary text-primary-foreground transition-opacity',
               'hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none',
             )}
           >
-            {/* up-arrow icon */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
               <line x1="12" y1="19" x2="12" y2="5" />
               <polyline points="5 12 12 5 19 12" />
             </svg>
           </button>
         </div>
-        <p className="ml-1 mt-1.5 text-xs text-muted-foreground">⏎ to send</p>
+        <div className="ml-1 mr-1 mt-2 flex items-center justify-between text-xs text-muted-foreground">
+          <span>⏎ to send</span>
+          <span>Powered by Anthropic</span>
+        </div>
       </form>
     </div>
   );
