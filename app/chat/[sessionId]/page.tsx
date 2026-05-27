@@ -14,7 +14,12 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <SiteHeader variant="chat" sessionLive />
+      <SiteHeader
+        variant="chat"
+        sessionLive
+        showAdminBadge={isAdmin}
+        adminEmail={isAdmin ? (session?.user?.email ?? undefined) : undefined}
+      />
       <main className="flex-1 overflow-hidden">
         <ChatStream ref={chatRef} sessionId={sessionId} isAdmin={isAdmin} />
       </main>
