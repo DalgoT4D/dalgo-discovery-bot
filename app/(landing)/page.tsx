@@ -1,7 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { EmailModal } from '@/components/email-modal';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/site-header';
 
 const LS_SESSION = 'dalgo_session_id';
@@ -9,8 +11,10 @@ const LS_EMAIL = 'dalgo_email';
 
 export default function Landing() {
   const router = useRouter();
-  const [hydrated, setHydrated] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem(LS_SESSION) : null;
@@ -18,48 +22,101 @@ export default function Landing() {
       router.replace(`/chat/${saved}`);
       return;
     }
-    setHydrated(true);
-    setShowModal(true);
+    setChecked(true);
   }, [router]);
 
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/intake', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(
+          body?.error === 'invalid_body'
+            ? 'Please enter a valid email address.'
+            : 'Something went wrong. Please try again.',
+        );
+        setSubmitting(false);
+        return;
+      }
+      const { session_id } = (await res.json()) as { session_id: string };
+      window.localStorage.setItem(LS_SESSION, session_id);
+      window.localStorage.setItem(LS_EMAIL, email);
+      router.push(`/chat/${session_id}`);
+      // intentionally don't reset submitting — page is about to unmount
+    } catch {
+      setError('Network error. Please try again.');
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <SiteHeader variant="chat" />
-      <main className="flex-1 overflow-hidden">
-        <div className="mx-auto flex h-full w-full max-w-3xl flex-col">
-          <div className="flex-1" aria-hidden />
-          <form className="px-4 pb-4 pt-2" aria-hidden onSubmit={(e) => e.preventDefault()}>
-            <div className="relative flex items-center rounded-xl border border-border bg-card shadow-sm opacity-60">
-              <input
-                disabled
-                placeholder="Ask anything about Dalgo…"
-                className="flex-1 bg-transparent px-4 py-3 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none"
-              />
-              <button
-                type="button"
-                disabled
-                aria-label="Send"
-                className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground opacity-40"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </button>
+    <div className="flex min-h-screen flex-col bg-background">
+      <SiteHeader />
+      <main className="flex flex-1 items-start justify-center px-4 pt-[14vh]">
+        {checked && (
+          <div className="w-full max-w-md">
+            {/* Brand hero */}
+            <div className="flex justify-center">
+              <span className="relative inline-flex h-14 w-14 items-center justify-center">
+                <span aria-hidden className="absolute inset-0 rounded-full bg-primary/15" />
+                <span aria-hidden className="relative h-10 w-10 rounded-full bg-primary" />
+              </span>
             </div>
-            <p className="ml-1 mt-1.5 text-xs text-muted-foreground">⏎ to send</p>
-          </form>
-        </div>
+
+            <h1 className="mt-6 text-center text-3xl font-medium tracking-tight text-foreground">
+              Welcome to Dalgo
+            </h1>
+            <p className="mx-auto mt-3 max-w-sm text-center text-[15px] text-muted-foreground">
+              A grounded assistant that helps NGO leaders figure out if Dalgo fits their work.
+            </p>
+
+            <Card className="mt-8 p-6">
+              <form onSubmit={onSubmit} className="space-y-3">
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">Your work email</span>
+                  <Input
+                    className="mt-1.5"
+                    type="email"
+                    required
+                    autoFocus
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) setError(null);
+                    }}
+                    placeholder="you@your-ngo.org"
+                    disabled={submitting}
+                    aria-label="Email address"
+                  />
+                </label>
+                <Button type="submit" disabled={submitting || !email} className="w-full">
+                  {submitting ? 'Starting…' : 'Start chatting →'}
+                </Button>
+                {error ? (
+                  <p className="text-center text-xs text-red-600" role="alert">
+                    {error}
+                  </p>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    We&apos;ll save your conversation so you can come back to it.
+                  </p>
+                )}
+              </form>
+            </Card>
+
+            <p className="mt-8 text-center text-xs uppercase tracking-wide text-muted-foreground">
+              Used by NGOs worldwide
+            </p>
+          </div>
+        )}
       </main>
-      {hydrated && showModal && (
-        <EmailModal
-          onSuccess={({ sessionId, email }) => {
-            window.localStorage.setItem(LS_SESSION, sessionId);
-            window.localStorage.setItem(LS_EMAIL, email);
-            router.push(`/chat/${sessionId}`);
-          }}
-        />
-      )}
     </div>
   );
 }
