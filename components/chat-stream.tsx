@@ -85,8 +85,9 @@ export const ChatStream = forwardRef<
   ChatStreamHandle,
   {
     sessionId: string;
+    isAdmin?: boolean;
   }
->(function ChatStream({ sessionId }, ref) {
+>(function ChatStream({ sessionId, isAdmin: _isAdmin }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     experimental_prepareRequestBody: ({ messages }) => {

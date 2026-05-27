@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Anek_Latin } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const anekLatin = Anek_Latin({
   variable: "--font-anek-latin",
@@ -23,7 +24,9 @@ export default function RootLayout({
       lang="en"
       className={`${anekLatin.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
