@@ -40,8 +40,7 @@ export function ProgressIngest({
       <Card className="w-full max-w-sm px-5 py-4">
         <div className="flex items-center gap-3">
           <span
-            className="inline-block h-4 w-4 rounded-full border-2 border-primary/30 border-t-primary"
-            style={{ animation: 'spin 0.8s linear infinite' }}
+            className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
             aria-hidden
           />
           <p className="text-[15px] font-medium text-foreground">Learning about your NGO…</p>
@@ -50,11 +49,6 @@ export function ProgressIngest({
           {slow ? 'Almost there…' : 'This usually takes a few seconds.'}
         </p>
       </Card>
-      <style jsx>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }
