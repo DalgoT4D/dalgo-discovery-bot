@@ -5,6 +5,7 @@ import { MessageBubble } from './message-bubble';
 import { Markdown } from './markdown';
 import { SoftCtaBanner } from './soft-cta-banner';
 import { TypingIndicator } from './typing-indicator';
+import { AssistantActions } from './assistant-actions';
 import { cn } from '@/components/ui/cn';
 
 interface ToolInvocationPart {
@@ -87,7 +88,7 @@ export const ChatStream = forwardRef<
     sessionId: string;
     isAdmin?: boolean;
   }
->(function ChatStream({ sessionId, isAdmin: _isAdmin }, ref) {
+>(function ChatStream({ sessionId, isAdmin }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     experimental_prepareRequestBody: ({ messages }) => {
@@ -127,6 +128,17 @@ export const ChatStream = forwardRef<
     ? partsToText(lastMsg.parts as MessagePart[] | undefined)
     : '';
   const showTyping = isSubmitted || (isStreaming && lastAssistantText.length === 0);
+
+  const findPrevUserText = (idx: number): string => {
+    for (let i = idx - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === 'user') {
+        const c = m.content;
+        return typeof c === 'string' ? c : partsToText(m.parts as MessagePart[]);
+      }
+    }
+    return '';
+  };
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col">
@@ -169,7 +181,16 @@ export const ChatStream = forwardRef<
               return (
                 <MessageBubble key={m.id} role={role}>
                   {role === 'assistant' ? (
-                    <Markdown text={text} streaming={isStreaming && isLastAssistant} />
+                    <>
+                      <Markdown text={text} streaming={isStreaming && isLastAssistant} />
+                      {isAdmin && (
+                        <AssistantActions
+                          messageId={m.id}
+                          userMsgText={findPrevUserText(idx)}
+                          asstMsgText={text}
+                        />
+                      )}
+                    </>
                   ) : (
                     <span className="whitespace-pre-wrap">{text}</span>
                   )}
