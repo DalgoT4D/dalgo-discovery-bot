@@ -6,7 +6,7 @@ export default function Privacy() {
       <SiteHeader />
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-2xl">
-          <article className="prose prose-slate max-w-none text-foreground">
+          <article className="text-foreground">
             <h1 className="text-3xl font-semibold mb-6 text-foreground">Privacy notice</h1>
 
             <p className="text-foreground">

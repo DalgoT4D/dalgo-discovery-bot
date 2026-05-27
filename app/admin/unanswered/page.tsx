@@ -36,8 +36,8 @@ export default function UnansweredPage() {
                 <td className="py-2">{it.question}</td>
                 <td className="py-2 text-muted-foreground">{new Date(it.created_at).toLocaleString()}</td>
                 <td className="py-2 text-right">
-                  <button className="text-primary underline mr-3" onClick={() => setPromoteFor(it)}>Answer & add to KB</button>
-                  <button className="text-muted-foreground underline" onClick={() => dismiss(it.id)}>Dismiss</button>
+                  <button type="button" className="text-primary underline mr-3" onClick={() => setPromoteFor(it)}>Answer & add to KB</button>
+                  <button type="button" className="text-muted-foreground underline" onClick={() => dismiss(it.id)}>Dismiss</button>
                 </td>
               </tr>
             ))}

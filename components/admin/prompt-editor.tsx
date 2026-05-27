@@ -144,6 +144,7 @@ export function PromptEditor({ promptKey }: { promptKey: string }) {
               </h4>
               <button
                 type="button"
+                aria-label="Close"
                 onClick={() => setDiffWith(null)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >

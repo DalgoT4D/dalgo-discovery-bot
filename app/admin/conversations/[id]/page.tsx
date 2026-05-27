@@ -65,6 +65,7 @@ export default function ConversationDetailPage() {
               {m.role === 'assistant' && (
                 <div className="mt-3 flex flex-wrap gap-3 border-t border-border pt-3 text-xs">
                   <button
+                    type="button"
                     className="text-primary hover:underline"
                     onClick={() => setPromoteFor({
                       messageId: m.id,
@@ -73,10 +74,12 @@ export default function ConversationDetailPage() {
                     })}
                   >↗ Promote to KB</button>
                   <button
+                    type="button"
                     className="text-muted-foreground hover:underline"
                     onClick={() => setDebugFor(m.id)}
                   >👁 View retrieval debug</button>
                   <button
+                    type="button"
                     className="text-red-600 hover:underline"
                     onClick={() => setWrongFor(m.id)}
                   >⚠ This answer is wrong</button>

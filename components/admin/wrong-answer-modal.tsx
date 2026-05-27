@@ -72,6 +72,7 @@ export function WrongAnswerModal({
           </h3>
           <button
             type="button"
+            aria-label="Close"
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >

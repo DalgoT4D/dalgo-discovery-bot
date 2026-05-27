@@ -20,6 +20,8 @@ export function RetrievalDebugPanel({ messageId, onClose }: Props) {
       <div className="flex justify-between mb-3">
         <h3 className="text-lg font-semibold text-foreground">Retrieval debug</h3>
         <button
+          type="button"
+          aria-label="Close"
           onClick={onClose}
           className="text-muted-foreground hover:text-foreground transition-colors"
         >
