@@ -17,8 +17,18 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { email } = parsed.data;
+  const email = parsed.data.email.toLowerCase().trim();
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+
+  // Email-keyed resume: if a session already exists for this email, return it
+  // without creating a new session or lead row.
+  const existing = await query<{ id: string }>(
+    `SELECT id FROM sessions WHERE email = $1 ORDER BY created_at DESC LIMIT 1`,
+    [email],
+  );
+  if (existing.rows[0]) {
+    return NextResponse.json({ session_id: existing.rows[0].id, resumed: true });
+  }
 
   const { rows } = await query<{ id: string }>(
     `INSERT INTO sessions (ip, email) VALUES ($1, $2) RETURNING id`,
@@ -30,5 +40,5 @@ export async function POST(req: NextRequest) {
   await emit('session_started', { has_pdf: false }, sessionId);
   await emit('lead_captured', { intent: 'email_signup', source_cta: 'email_gate' }, sessionId);
 
-  return NextResponse.json({ session_id: sessionId });
+  return NextResponse.json({ session_id: sessionId, resumed: false });
 }
