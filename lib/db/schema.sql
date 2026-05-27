@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at  timestamptz NOT NULL DEFAULT now(),
   ended_at    timestamptz,
   ip          inet,
+  email       text,
   ngo_url     text,
   ngo_summary text,
   ngo_systems text,
@@ -52,7 +53,7 @@ CREATE TABLE IF NOT EXISTS leads (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id  uuid REFERENCES sessions(id) ON DELETE SET NULL,
   email       text NOT NULL,
-  intent      text CHECK (intent IN ('demo','pdf_report','flag_questions')),
+  intent      text CHECK (intent IN ('demo','pdf_report','flag_questions','email_signup')),
   summary     text,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
@@ -272,3 +273,16 @@ CREATE TABLE IF NOT EXISTS wrong_answer_reports (
 );
 CREATE INDEX IF NOT EXISTS wrong_answer_reports_msg_idx
   ON wrong_answer_reports (message_id);
+
+-- ============================================================
+-- Phase 5: Email-gate modal (added 2026-05-27)
+-- ============================================================
+
+-- Sessions now store the captured email from the email-gate modal.
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS email text;
+
+-- Extend leads.intent CHECK to accept 'email_signup' (auto-recorded
+-- when the email gate is satisfied). Drop-and-re-add for idempotency.
+ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_intent_check;
+ALTER TABLE leads ADD CONSTRAINT leads_intent_check
+  CHECK (intent IN ('demo','pdf_report','flag_questions','email_signup'));
