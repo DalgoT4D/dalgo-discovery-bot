@@ -286,3 +286,20 @@ ALTER TABLE sessions ADD COLUMN IF NOT EXISTS email text;
 ALTER TABLE leads DROP CONSTRAINT IF EXISTS leads_intent_check;
 ALTER TABLE leads ADD CONSTRAINT leads_intent_check
   CHECK (intent IN ('demo','pdf_report','flag_questions','email_signup'));
+
+-- ============================================================
+-- Phase 6: Multi-admin support (added 2026-05-27)
+-- ============================================================
+
+-- DB-backed admins replace the single env-var admin (ADMIN_USERNAME /
+-- ADMIN_PASSWORD_HASH). The env vars are kept as a one-time seed
+-- mechanism via lib/db/bootstrap.ts. is_system marks the seed admin,
+-- who is the only one allowed to manage other admins.
+CREATE TABLE IF NOT EXISTS admins (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         text UNIQUE NOT NULL,
+  password_hash text NOT NULL,
+  is_system     boolean NOT NULL DEFAULT false,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  created_by    uuid REFERENCES admins(id) ON DELETE SET NULL
+);
