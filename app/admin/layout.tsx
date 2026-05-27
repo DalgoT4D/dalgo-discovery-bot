@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { query } from '@/lib/db/client';
 import { Badge } from '@/components/ui/badge';
 
-const NAV = [
+const NAV: Array<{ href: string; label: string; badgeKey?: 'unanswered' }> = [
   { href: '/admin', label: 'Leads' },
   { href: '/admin/kb', label: 'Knowledge Base' },
   { href: '/admin/prompts', label: 'Prompts' },
   { href: '/admin/blogs', label: 'Blogs' },
-  { href: '/admin/unanswered', label: 'Unanswered', badgeKey: 'unanswered' as const },
+  { href: '/admin/unanswered', label: 'Unanswered', badgeKey: 'unanswered' },
   { href: '/admin/conversations', label: 'Conversations' },
 ];
 
@@ -22,6 +22,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   );
   const unansweredCount = rows[0]?.c ?? 0;
 
+  const isSystem = !!(session?.user as { isSystem?: boolean })?.isSystem;
+  const nav: Array<{ href: string; label: string; badgeKey?: 'unanswered' }> = isSystem
+    ? [...NAV, { href: '/admin/admins', label: 'Admins' }]
+    : NAV;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="flex h-screen w-60 shrink-0 flex-col border-r border-border bg-card">
@@ -30,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="text-[15px] font-semibold text-foreground">Discovery Bot Admin</span>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
