@@ -10,7 +10,7 @@ export default async function PromptDetailPage({
   const title = PROMPT_SECTION_TITLES[key] ?? key;
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl">{title}</h2>
+      <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
       <PromptEditor promptKey={key} />
     </div>
   );

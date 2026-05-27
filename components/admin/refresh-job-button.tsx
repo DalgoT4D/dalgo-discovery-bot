@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export function RefreshJobButton({ onDone }: { onDone: () => void }) {
   const [jobId, setJobId] = useState<string | null>(null);
@@ -28,15 +29,16 @@ export function RefreshJobButton({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="flex items-center gap-3">
-      <button
-        className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+      <Button
+        variant="primary"
+        size="sm"
         onClick={start}
         disabled={!!jobId}
       >
         {jobId ? 'Refreshing…' : 'Refresh blogs'}
-      </button>
+      </Button>
       {status && (
-        <div className="text-xs text-slate-600">
+        <div className="text-xs text-muted-foreground">
           seen {status.posts_seen} · new {status.posts_new} · updated {status.posts_updated} · skipped {status.posts_skipped}
           {status.status !== 'running' && <> · <strong>{status.status}</strong></>}
         </div>

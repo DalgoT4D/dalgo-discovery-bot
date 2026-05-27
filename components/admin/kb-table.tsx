@@ -1,6 +1,7 @@
 'use client';
 import useSWR from 'swr';
 import Link from 'next/link';
+import { Card } from '@/components/ui/card';
 
 type KbRow = {
   id: string;
@@ -19,34 +20,36 @@ export function KbTable() {
   if (error) return <p>Error.</p>;
 
   return (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="text-left border-b">
-          <th className="p-2">Category</th>
-          <th className="p-2">Question (first variant)</th>
-          <th className="p-2">Status</th>
-          <th className="p-2">Last verified</th>
-          <th className="p-2"></th>
-        </tr>
-      </thead>
-      <tbody>
-        {(data?.items ?? []).map((it) => (
-          <tr key={it.id} className="border-b">
-            <td className="p-2">{it.category}</td>
-            <td className="p-2">{it.question_variants?.[0]}</td>
-            <td className="p-2">
-              <StatusBadge status={it.status} />
-            </td>
-            <td className="p-2">{new Date(it.last_verified).toLocaleDateString()}</td>
-            <td className="p-2">
-              <Link href={`/admin/kb/${it.id}`} className="text-blue-600 underline">
-                edit
-              </Link>
-            </td>
+    <Card className="p-4">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left border-b border-border">
+            <th className="p-2">Category</th>
+            <th className="p-2">Question (first variant)</th>
+            <th className="p-2">Status</th>
+            <th className="p-2">Last verified</th>
+            <th className="p-2"></th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {(data?.items ?? []).map((it) => (
+            <tr key={it.id} className="border-b border-border">
+              <td className="p-2">{it.category}</td>
+              <td className="p-2">{it.question_variants?.[0]}</td>
+              <td className="p-2">
+                <StatusBadge status={it.status} />
+              </td>
+              <td className="p-2">{new Date(it.last_verified).toLocaleDateString()}</td>
+              <td className="p-2">
+                <Link href={`/admin/kb/${it.id}`} className="text-primary underline">
+                  edit
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 

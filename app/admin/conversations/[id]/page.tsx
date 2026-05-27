@@ -44,15 +44,15 @@ export default function ConversationDetailPage() {
 
   return (
     <div>
-      <h2 className="text-2xl mb-4">Transcript</h2>
+      <h1 className="text-2xl font-semibold text-foreground mb-4">Transcript</h1>
       {messages.map((m, idx) => (
-        <div key={m.id} className={`my-3 ${m.role === 'user' ? 'text-slate-900' : 'text-blue-900'}`}>
-          <div className="text-xs text-slate-500 mb-1">{m.role}</div>
+        <div key={m.id} className={`my-3 ${m.role === 'user' ? 'text-foreground' : 'text-primary'}`}>
+          <div className="text-xs text-muted-foreground mb-1">{m.role}</div>
           <div>{asText(m.content)}</div>
           {m.role === 'assistant' && (
             <div className="mt-1 flex gap-2 text-xs">
               <button
-                className="text-blue-700 underline"
+                className="text-primary underline"
                 onClick={() => setPromoteFor({
                   messageId: m.id,
                   userMsgText: findPrevUserText(idx),
@@ -60,7 +60,7 @@ export default function ConversationDetailPage() {
                 })}
               >↗ Promote to KB</button>
               <button
-                className="text-slate-600 underline"
+                className="text-muted-foreground underline"
                 onClick={() => setDebugFor(m.id)}
               >👁 View retrieval debug</button>
               <button

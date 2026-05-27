@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   messageId: string;
@@ -50,13 +51,13 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl space-y-4">
-        <h3 className="text-lg font-semibold">Promote to KB</h3>
+      <div className="bg-card text-card-foreground rounded-lg p-6 w-full max-w-2xl space-y-4 border border-border">
+        <h3 className="text-lg font-semibold text-foreground">Promote to KB</h3>
 
         <label className="block">
-          <div className="text-sm font-medium">Question (one phrasing per line)</div>
+          <div className="text-sm font-medium text-foreground">Question (one phrasing per line)</div>
           <textarea
-            className="w-full border rounded p-2 mt-1"
+            className="w-full border border-border rounded-md p-2 mt-1 bg-card text-foreground"
             rows={3}
             value={questionVariants}
             onChange={(e) => setQuestionVariants(e.target.value)}
@@ -64,9 +65,9 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
         </label>
 
         <label className="block">
-          <div className="text-sm font-medium">Canonical answer</div>
+          <div className="text-sm font-medium text-foreground">Canonical answer</div>
           <textarea
-            className="w-full border rounded p-2 mt-1"
+            className="w-full border border-border rounded-md p-2 mt-1 bg-card text-foreground"
             rows={6}
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
@@ -75,9 +76,9 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <div className="text-sm font-medium">Category</div>
+            <div className="text-sm font-medium text-foreground">Category</div>
             <select
-              className="w-full border rounded p-2 mt-1"
+              className="w-full border border-border rounded-md p-2 mt-1 bg-card text-foreground"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -85,9 +86,9 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
             </select>
           </label>
           <label className="block">
-            <div className="text-sm font-medium">Status</div>
+            <div className="text-sm font-medium text-foreground">Status</div>
             <select
-              className="w-full border rounded p-2 mt-1"
+              className="w-full border border-border rounded-md p-2 mt-1 bg-card text-foreground"
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
             >
@@ -100,9 +101,9 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
         </div>
 
         <label className="block">
-          <div className="text-sm font-medium">Evidence URLs (one per line)</div>
+          <div className="text-sm font-medium text-foreground">Evidence URLs (one per line)</div>
           <textarea
-            className="w-full border rounded p-2 mt-1"
+            className="w-full border border-border rounded-md p-2 mt-1 bg-card text-foreground"
             rows={2}
             value={evidence}
             onChange={(e) => setEvidence(e.target.value)}
@@ -110,10 +111,10 @@ export function PromoteModal({ messageId, initialQuestion, initialAnswer, onClos
         </label>
 
         <div className="flex justify-end gap-2 pt-2">
-          <button className="px-4 py-2 border rounded" onClick={onClose}>Cancel</button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={save} disabled={saving}>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" onClick={save} disabled={saving}>
             {saving ? 'Saving…' : 'Save to KB'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { PromoteModal } from '@/components/admin/promote-modal';
+import { Card } from '@/components/ui/card';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -22,25 +23,27 @@ export default function UnansweredPage() {
   };
 
   return (
-    <div>
-      <h2 className="text-2xl mb-4">Unanswered questions</h2>
-      <table className="w-full text-sm">
-        <thead><tr className="text-left text-slate-500">
-          <th>Question</th><th>When</th><th></th>
-        </tr></thead>
-        <tbody>
-          {(data?.items ?? []).map((it) => (
-            <tr key={it.id} className="border-t">
-              <td className="py-2">{it.question}</td>
-              <td className="py-2 text-slate-500">{new Date(it.created_at).toLocaleString()}</td>
-              <td className="py-2 text-right">
-                <button className="text-blue-700 underline mr-3" onClick={() => setPromoteFor(it)}>Answer & add to KB</button>
-                <button className="text-slate-500 underline" onClick={() => dismiss(it.id)}>Dismiss</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      <h1 className="text-2xl font-semibold text-foreground">Unanswered questions</h1>
+      <Card className="p-4">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-muted-foreground">
+            <th>Question</th><th>When</th><th></th>
+          </tr></thead>
+          <tbody>
+            {(data?.items ?? []).map((it) => (
+              <tr key={it.id} className="border-t border-border">
+                <td className="py-2">{it.question}</td>
+                <td className="py-2 text-muted-foreground">{new Date(it.created_at).toLocaleString()}</td>
+                <td className="py-2 text-right">
+                  <button className="text-primary underline mr-3" onClick={() => setPromoteFor(it)}>Answer & add to KB</button>
+                  <button className="text-muted-foreground underline" onClick={() => dismiss(it.id)}>Dismiss</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
 
       {promoteFor && (
         <PromoteModal

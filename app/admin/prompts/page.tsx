@@ -19,8 +19,8 @@ export default async function PromptsListPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl">Prompts</h2>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-2xl font-semibold text-foreground">Prompts</h1>
+        <p className="text-sm text-muted-foreground">
           Edit the bot's system prompt sections. Changes take effect on the next chat request (cached up to 60 seconds).
         </p>
       </div>
@@ -28,18 +28,18 @@ export default async function PromptsListPage() {
         {ordered.map((p) => (
           <li
             key={p.key}
-            className="border rounded p-4 bg-white hover:bg-slate-50"
+            className="border border-border rounded-lg p-4 bg-card hover:bg-muted transition-colors"
           >
             <Link href={`/admin/prompts/${p.key}`} className="block space-y-2">
               <div className="flex items-baseline justify-between">
-                <h3 className="font-medium text-slate-900">
+                <h3 className="font-medium text-foreground">
                   {PROMPT_SECTION_TITLES[p.key] ?? p.key}
                 </h3>
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   {new Date(p.updated_at).toLocaleString()} · {p.updated_by}
                 </span>
               </div>
-              <p className="text-sm text-slate-600 line-clamp-2 font-mono">
+              <p className="text-sm text-muted-foreground line-clamp-2 font-mono">
                 {p.content.slice(0, 200)}
                 {p.content.length > 200 ? '…' : ''}
               </p>

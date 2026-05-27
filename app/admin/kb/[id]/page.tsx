@@ -4,7 +4,7 @@ export default async function KbEditPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl">{id === 'new' ? 'New KB entry' : 'Edit KB entry'}</h2>
+      <h1 className="text-2xl font-semibold text-foreground">{id === 'new' ? 'New KB entry' : 'Edit KB entry'}</h1>
       <KbEditor id={id} />
     </div>
   );

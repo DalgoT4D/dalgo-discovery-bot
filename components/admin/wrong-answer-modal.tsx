@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { KbEditor } from '@/components/admin/kb-editor';
+import { Button } from '@/components/ui/button';
 import type { Candidate } from '@/lib/admin/wrong-answer-types';
 
 type Stage = 'reason' | 'pick' | 'edit' | 'no_trace';
@@ -59,11 +60,11 @@ export function WrongAnswerModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded shadow-lg p-5 w-[90vw] max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+        className="bg-card text-card-foreground rounded-lg shadow-lg p-5 w-[90vw] max-w-2xl space-y-4 max-h-[90vh] overflow-y-auto border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-medium text-lg">
+          <h3 className="font-medium text-lg text-foreground">
             {stage === 'reason' && 'Report a wrong answer'}
             {stage === 'pick' && 'Pick the KB entry to fix'}
             {stage === 'edit' && 'Edit KB entry'}
@@ -72,7 +73,7 @@ export function WrongAnswerModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-900"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
             ✕
           </button>
@@ -82,7 +83,7 @@ export function WrongAnswerModal({
 
         {stage === 'reason' && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               What was wrong about this answer? This will be saved for review and used to find the KB entry to fix.
             </p>
             <textarea
@@ -90,31 +91,27 @@ export function WrongAnswerModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. The bot claimed Dalgo has RLS, but RLS is a Superset feature."
               rows={5}
-              className="w-full border rounded p-2 text-sm"
+              className="w-full border border-border rounded-md p-2 text-sm bg-card text-foreground"
             />
             <div className="flex gap-2 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="border px-4 py-2 rounded text-sm"
-              >
+              <Button variant="outline" size="sm" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={submitReason}
                 disabled={reason.trim().length === 0 || submitting}
-                className="bg-slate-900 text-white px-4 py-2 rounded text-sm disabled:opacity-40"
               >
                 {submitting ? 'Submitting…' : 'Submit'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {stage === 'pick' && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               These KB entries were the top candidates that fed this answer. Pick the one that misled the bot, or skip if none apply.
             </p>
             <ul className="space-y-2">
@@ -123,25 +120,21 @@ export function WrongAnswerModal({
                   <button
                     type="button"
                     onClick={() => { setChosen(c); setStage('edit'); }}
-                    className="w-full text-left border rounded p-3 hover:bg-slate-50"
+                    className="w-full text-left border border-border rounded-md p-3 hover:bg-muted transition-colors"
                   >
                     <div className="flex items-baseline justify-between">
-                      <span className="font-medium text-sm">{c.question}</span>
-                      <span className="text-xs text-slate-500">score {c.score.toFixed(2)}</span>
+                      <span className="font-medium text-sm text-foreground">{c.question}</span>
+                      <span className="text-xs text-muted-foreground">score {c.score.toFixed(2)}</span>
                     </div>
-                    <div className="text-xs text-slate-600 mt-1 line-clamp-2">{c.snippet}</div>
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{c.snippet}</div>
                   </button>
                 </li>
               ))}
             </ul>
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="border px-4 py-2 rounded text-sm"
-              >
+              <Button variant="outline" size="sm" onClick={onClose}>
                 None of these — skip fix
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -158,17 +151,13 @@ export function WrongAnswerModal({
 
         {stage === 'no_trace' && (
           <div className="space-y-3">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted-foreground">
               No retrieval trace is available for this message (it was sent before Phase 3 retrieval tracing). Your report has been saved but there's no candidate to fix inline.
             </p>
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="bg-slate-900 text-white px-4 py-2 rounded text-sm"
-              >
+              <Button variant="primary" size="sm" onClick={onClose}>
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         )}
