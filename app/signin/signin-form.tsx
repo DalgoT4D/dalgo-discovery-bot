@@ -12,13 +12,13 @@ export function SignInForm() {
   const callbackUrl = params.get('callbackUrl') || '/admin';
   const err = params.get('error');
   const [submitting, setSubmitting] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    await signIn('admin-credentials', { username, password, callbackUrl });
+    await signIn('admin-credentials', { email, password, callbackUrl });
   }
 
   return (
@@ -30,18 +30,19 @@ export function SignInForm() {
         {err && (
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">
             {err === 'CredentialsSignin'
-              ? 'Invalid username or password.'
+              ? 'Invalid email or password.'
               : `Error: ${err}`}
           </p>
         )}
         <form onSubmit={submit} className="space-y-3">
           <label className="block">
-            <span className="text-sm font-medium text-foreground">Username</span>
+            <span className="text-sm font-medium text-foreground">Email</span>
             <Input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              autoComplete="username"
+              type="email"
+              autoComplete="email"
               className="mt-1"
             />
           </label>
@@ -61,10 +62,10 @@ export function SignInForm() {
           </Button>
         </form>
         <p className="text-xs text-muted-foreground">
-          Generate a password hash with{' '}
-          <code className="bg-muted px-1 rounded">npm run admin:hash &lt;password&gt;</code> and
-          put it in <code className="bg-muted px-1 rounded">.env.local</code> as{' '}
-          <code className="bg-muted px-1 rounded">ADMIN_PASSWORD_HASH</code>.
+          First-time setup: set <code className="bg-muted px-1 rounded">ADMIN_USERNAME</code> and{' '}
+          <code className="bg-muted px-1 rounded">ADMIN_PASSWORD_HASH</code> in{' '}
+          <code className="bg-muted px-1 rounded">.env.local</code>. The system admin is seeded
+          automatically on first sign-in.
         </p>
       </CardContent>
     </Card>
