@@ -133,6 +133,11 @@ export interface RunResult {
   bucket: string;
   pass: boolean;
   judgeResults: JudgeResult[];
+  // Additional fields captured for UI drill-down (Plan 2 Task 3):
+  botResponse?: string;       // synthesized answer text
+  retrievalTrace?: unknown;   // shape: RetrievalTrace from runPipeline
+  toolCalls?: unknown;        // tool invocations (empty in the new path)
+  latencyMs?: number;         // wall time for the case in milliseconds
 }
 
 async function synthesizeAnswer(
@@ -159,6 +164,7 @@ async function ensureSessionExists(sessionId: string): Promise<void> {
 }
 
 async function runCase(c: EvalCase): Promise<RunResult> {
+  const t0 = Date.now();
   const sessionId = randomUUID();
   await ensureSessionExists(sessionId);
   const pipe = await runPipeline(c.input);
@@ -195,11 +201,19 @@ async function runCase(c: EvalCase): Promise<RunResult> {
     }
   }
 
+  const latencyMs = Date.now() - t0;
+
   return {
     id: c.id,
     bucket: c.bucket,
     pass: judgeResults.every((j) => j.pass),
     judgeResults,
+    botResponse: response,
+    retrievalTrace: pipe.trace,
+    // The new path bypasses the chat handler and never invokes tools, so we
+    // return an empty array. (Legacy path is unchanged and not modified here.)
+    toolCalls: [],
+    latencyMs,
   };
 }
 
