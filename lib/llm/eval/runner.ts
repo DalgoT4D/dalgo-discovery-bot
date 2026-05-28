@@ -27,12 +27,8 @@ import { query } from '@/lib/db/client';
 import { runPipeline } from '@/lib/llm/rag/pipeline';
 
 import { legacyEvalCases, type LegacyEvalCase } from './cases';
-import { problemStatementCases } from './cases/problem-statements';
-import { toolNameCases } from './cases/tool-names';
-import { citationCases } from './cases/citations';
-import { guardrailCases } from './cases/guardrails';
-import { structureCases } from './cases/structure';
 import type { EvalCase } from './cases/types';
+import { getEvalCases } from './case-source';
 import { retrievalJudge } from './judges/retrieval-judge';
 import { llmJudge } from './judges/llm-judge';
 import { exactMatchJudge } from './judges/exact-match';
@@ -130,14 +126,6 @@ export async function runLegacyAll(): Promise<EvalResult[]> {
 // NEW RUNNER (50 Phase-2 cases) — multi-judge dispatch
 // ---------------------------------------------------------------------------
 
-const ALL: EvalCase[] = [
-  ...problemStatementCases,
-  ...toolNameCases,
-  ...citationCases,
-  ...guardrailCases,
-  ...structureCases,
-];
-
 const SYNTH_MODEL = 'claude-sonnet-4-6';
 
 export interface RunResult {
@@ -170,7 +158,7 @@ async function ensureSessionExists(sessionId: string): Promise<void> {
   );
 }
 
-export async function runOne(c: EvalCase): Promise<RunResult> {
+async function runCase(c: EvalCase): Promise<RunResult> {
   const sessionId = randomUUID();
   await ensureSessionExists(sessionId);
   const pipe = await runPipeline(c.input);
@@ -215,6 +203,13 @@ export async function runOne(c: EvalCase): Promise<RunResult> {
   };
 }
 
+export async function runOne(id: string): Promise<RunResult> {
+  const cases = await getEvalCases();
+  const target = cases.find((c) => c.id === id);
+  if (!target) throw new Error(`unknown eval case: ${id}`);
+  return runCase(target);
+}
+
 // Run all cases with bounded concurrency. Each case fires ~5-7 Claude API
 // calls (HyDE + reranker + synthesis + 3-judge ensemble), so we cap
 // in-flight workers to stay well under Anthropic per-minute caps while
@@ -222,15 +217,16 @@ export async function runOne(c: EvalCase): Promise<RunResult> {
 const EVAL_CONCURRENCY = Number(process.env.EVAL_CONCURRENCY ?? 5);
 
 export async function runAll(): Promise<RunResult[]> {
-  const out: RunResult[] = new Array(ALL.length);
+  const cases = await getEvalCases();
+  const out: RunResult[] = new Array(cases.length);
   let next = 0;
   async function worker() {
     while (true) {
       const i = next++;
-      if (i >= ALL.length) return;
-      const c = ALL[i];
+      if (i >= cases.length) return;
+      const c = cases[i];
       try {
-        const r = await runOne(c);
+        const r = await runCase(c);
         out[i] = r;
         // eslint-disable-next-line no-console
         console.log(`${r.pass ? 'PASS' : 'FAIL'} ${c.id} (${c.bucket})`);
@@ -241,7 +237,7 @@ export async function runAll(): Promise<RunResult[]> {
           id: c.id,
           bucket: c.bucket,
           pass: false,
-          judgeResults: [{ pass: false, notes: `runOne threw: ${String(e)}` }],
+          judgeResults: [{ pass: false, notes: `runCase threw: ${String(e)}` }],
         };
       }
     }
