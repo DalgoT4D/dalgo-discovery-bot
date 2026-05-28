@@ -163,7 +163,7 @@ async function ensureSessionExists(sessionId: string): Promise<void> {
   );
 }
 
-async function runCase(c: EvalCase): Promise<RunResult> {
+export async function runCase(c: EvalCase): Promise<RunResult> {
   const t0 = Date.now();
   const sessionId = randomUUID();
   await ensureSessionExists(sessionId);
