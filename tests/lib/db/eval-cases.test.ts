@@ -66,7 +66,6 @@ describe('eval-cases queries', () => {
       case_key: 'qtest_versioned', bucket: 'citations', input: 'v1',
       expected: {}, judges: ['retrieval-judge'], enabled: true, notes: null, updated_by: 'test',
     });
-    await new Promise((r) => setTimeout(r, 5));
     await updateEvalCase(id, {
       input: 'v2',
       expected: { must_cite_one_of: ['https://x'] },
@@ -94,6 +93,36 @@ describe('eval-cases queries', () => {
     await deleteEvalCase(id);
     const row = await getEvalCase(id);
     expect(row).toBeNull();
+  });
+
+  it('updateEvalCase throws for unknown id', async () => {
+    await expect(
+      updateEvalCase('00000000-0000-0000-0000-000000000000', {
+        input: 'never',
+        updated_by: 'test',
+      }),
+    ).rejects.toThrow(/not found/);
+  });
+
+  it('failed create rolls back the version row', async () => {
+    // First create succeeds: 1 version row exists for qtest_rollback
+    const firstId = await createEvalCase({
+      case_key: 'qtest_rollback', bucket: 'citations', input: 'first',
+      expected: {}, judges: ['retrieval-judge'], enabled: true, notes: null,
+      updated_by: 'test',
+    });
+    // Second create with the same case_key MUST fail (unique violation)
+    await expect(
+      createEvalCase({
+        case_key: 'qtest_rollback', bucket: 'citations', input: 'second',
+        expected: {}, judges: ['retrieval-judge'], enabled: true, notes: null,
+        updated_by: 'test',
+      }),
+    ).rejects.toThrow();
+    // Verify no orphan version row was committed — should still be exactly 1
+    const versions = await listEvalCaseVersions(firstId);
+    expect(versions.length).toBe(1);
+    expect(versions[0].input).toBe('first');
   });
 
   afterAll(async () => { await pool().end(); });

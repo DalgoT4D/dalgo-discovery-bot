@@ -73,7 +73,7 @@ export async function createEvalCase(input: EvalCaseInput): Promise<string> {
       await client.query('COMMIT');
       return id;
     } catch (err) {
-      await client.query('ROLLBACK');
+      try { await client.query('ROLLBACK'); } catch { /* ignore */ }
       throw err;
     }
   });
@@ -101,6 +101,8 @@ export interface ListOptions {
 }
 
 export async function listEvalCases(opts: ListOptions = {}): Promise<EvalCaseRow[]> {
+  // Only push HARDCODED predicate strings into `wheres` (e.g. `'bucket = $N'`).
+  // Never interpolate caller-supplied identifiers — this array is joined raw into SQL.
   const wheres: string[] = [];
   const params: unknown[] = [];
   if (opts.bucket) { params.push(opts.bucket); wheres.push(`bucket = $${params.length}`); }
@@ -154,7 +156,7 @@ export async function updateEvalCase(id: string, patch: EvalCasePatch): Promise<
       );
       await client.query('COMMIT');
     } catch (err) {
-      await client.query('ROLLBACK');
+      try { await client.query('ROLLBACK'); } catch { /* ignore */ }
       throw err;
     }
   });
@@ -168,7 +170,7 @@ export async function listEvalCaseVersions(id: string): Promise<EvalCaseVersionR
   const { rows } = await query<EvalCaseVersionRow>(
     `SELECT * FROM dalgo_eval_case_versions
       WHERE case_id = $1
-      ORDER BY updated_at DESC`,
+      ORDER BY updated_at DESC, id DESC`,
     [id],
   );
   return rows;
