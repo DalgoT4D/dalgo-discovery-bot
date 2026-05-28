@@ -14,13 +14,31 @@ let misses = 0;
 
 const ALL_KEY = '__all__';
 
+const VALID_JUDGES = new Set<EvalCase['judge'][number]>([
+  'retrieval-judge',
+  'llm-judge',
+  'exact-match',
+]);
+
 function rowToCase(row: EvalCaseRow): EvalCase {
+  const judges = (Array.isArray(row.judges) ? row.judges : [])
+    .filter((j): j is EvalCase['judge'][number] => VALID_JUDGES.has(j as EvalCase['judge'][number]));
+  if (judges.length !== (row.judges?.length ?? 0)) {
+    console.warn(
+      `[case-source] case ${row.case_key} has invalid judge name(s); filtered to:`,
+      judges,
+    );
+  }
+  const expected =
+    row.expected && typeof row.expected === 'object' && !Array.isArray(row.expected)
+      ? (row.expected as EvalCase['expected'])
+      : ({} as EvalCase['expected']);
   return {
     id: row.case_key,
     bucket: row.bucket as EvalCase['bucket'],
     input: row.input,
-    expected: row.expected as EvalCase['expected'],
-    judge: row.judges as EvalCase['judge'],
+    expected,
+    judge: judges,
   };
 }
 

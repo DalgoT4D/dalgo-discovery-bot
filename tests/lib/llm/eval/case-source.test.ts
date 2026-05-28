@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, beforeEach, vi } from 'vitest';
 import 'dotenv/config';
 import { query, pool } from '@/lib/db/client';
 import { createEvalCase, deleteEvalCase } from '@/lib/db/queries/eval-cases';
@@ -60,6 +60,32 @@ describe('case-source cache', () => {
     const keys = cases.map((c) => c.id);
     expect(keys).toContain('csrc_all1');
     expect(keys).not.toContain('csrc_all2'); // disabled cases excluded
+  });
+
+  it('expires cache after TTL window', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await createEvalCase({
+        case_key: 'csrc_ttl', bucket: 'citations', input: 'x',
+        expected: {}, judges: ['retrieval-judge'], enabled: true, notes: null,
+        updated_by: 'test',
+      });
+      await getEvalCases('citations');
+      const before = __cacheStatsForTests();
+
+      // Within TTL: hit
+      await getEvalCases('citations');
+      const within = __cacheStatsForTests();
+      expect(within.hits).toBe(before.hits + 1);
+
+      // Past TTL (60s + 1s): miss
+      vi.advanceTimersByTime(61_000);
+      await getEvalCases('citations');
+      const after = __cacheStatsForTests();
+      expect(after.misses).toBeGreaterThan(within.misses);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   afterAll(async () => { await pool().end(); });
