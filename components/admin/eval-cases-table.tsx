@@ -1,32 +1,20 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+import type { EvalCaseRow } from '@/lib/db/queries/eval-cases';
 
-interface EvalCaseRow {
-  id: string;
-  case_key: string;
-  bucket: string;
-  input: string;
-  enabled: boolean;
-  updated_at: string;
-  updated_by: string;
-}
+const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
 export function EvalCasesTable() {
-  const [cases, setCases] = useState<EvalCaseRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, error, isLoading } = useSWR<{ cases: EvalCaseRow[] }>(
+    '/api/admin/eval-cases',
+    fetcher,
+  );
 
-  useEffect(() => {
-    fetch('/api/admin/eval-cases')
-      .then((r) => r.json())
-      .then((data) => setCases(data.cases ?? []))
-      .catch((err) => setError(String(err)))
-      .finally(() => setLoading(false));
-  }, []);
+  if (isLoading) return <p>Loading…</p>;
+  if (error) return <p className="text-destructive">Error loading cases</p>;
 
-  if (loading) return <p>Loading…</p>;
-  if (error) return <p className="text-red-600">Error: {error}</p>;
+  const cases = data?.cases ?? [];
 
   const byBucket = cases.reduce<Record<string, EvalCaseRow[]>>((acc, c) => {
     (acc[c.bucket] ??= []).push(c);
@@ -44,7 +32,7 @@ export function EvalCasesTable() {
             </h2>
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b text-left">
+                <tr className="border-b border-border text-left">
                   <th className="py-2 pr-4">Key</th>
                   <th className="py-2 pr-4">Input</th>
                   <th className="py-2 pr-4">Enabled</th>
@@ -54,19 +42,19 @@ export function EvalCasesTable() {
               </thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={c.id} className="border-b hover:bg-gray-50">
+                  <tr key={c.id} className="border-b border-border hover:bg-muted">
                     <td className="py-2 pr-4 font-mono text-xs">{c.case_key}</td>
                     <td className="py-2 pr-4">
                       {c.input.length > 80 ? c.input.slice(0, 80) + '…' : c.input}
                     </td>
                     <td className="py-2 pr-4">{c.enabled ? '✓' : '—'}</td>
-                    <td className="py-2 pr-4 text-xs text-gray-500">
+                    <td className="py-2 pr-4 text-xs text-muted-foreground">
                       {new Date(c.updated_at).toLocaleString()} by {c.updated_by}
                     </td>
                     <td className="py-2">
                       <Link
                         href={`/admin/evals/${c.id}`}
-                        className="text-blue-600 hover:underline"
+                        className="text-primary underline"
                       >
                         Edit
                       </Link>
