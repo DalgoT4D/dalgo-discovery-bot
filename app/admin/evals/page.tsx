@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { EvalCasesTable } from '@/components/admin/eval-cases-table';
+import { RunEvalsButton } from '@/components/admin/run-evals-button';
 
 export default async function EvalsPage() {
   return (
@@ -18,6 +19,7 @@ export default async function EvalsPage() {
           New case
         </Link>
       </header>
+      <RunEvalsButton />
       <EvalCasesTable />
     </main>
   );
