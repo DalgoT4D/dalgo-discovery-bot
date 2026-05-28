@@ -70,7 +70,8 @@ export async function PUT(req: Request, ctx: RouteContext) {
   if (typeof body.bucket === 'string' && body.bucket !== existing.bucket) {
     invalidateEvalCaseCache(body.bucket);
   }
-  return NextResponse.json({ ok: true });
+  const updated = await getEvalCase(id);
+  return NextResponse.json({ case: updated });
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext) {
@@ -78,7 +79,7 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { id } = await ctx.params;
   const existing = await getEvalCase(id);
-  if (!existing) return new NextResponse(null, { status: 204 }); // idempotent
+  if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
   await deleteEvalCase(id);
   invalidateEvalCaseCache(existing.bucket);
   return new NextResponse(null, { status: 204 });
