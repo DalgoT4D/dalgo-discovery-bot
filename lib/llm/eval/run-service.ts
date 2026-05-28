@@ -8,7 +8,11 @@ import { getEvalCaseByKey } from '@/lib/db/queries/eval-cases';
 export async function startFullRun(triggeredBy: string): Promise<string> {
   const runId = await createEvalRun({ kind: 'full', triggered_by: triggeredBy });
   // Fire-and-forget; the function continues in the background.
-  setImmediate(() => { void executeFullRun(runId); });
+  setImmediate(() => {
+    executeFullRun(runId).catch((fatal) => {
+      console.error('[eval] executeFullRun fatal (could not even mark run as failed):', fatal);
+    });
+  });
   return runId;
 }
 
