@@ -1,6 +1,8 @@
 -- 003_eval_cases.sql
 -- Add dalgo_eval_cases + dalgo_eval_case_versions, mirroring the prompts pattern.
 
+BEGIN;
+
 CREATE TABLE IF NOT EXISTS dalgo_eval_cases (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   case_key      text NOT NULL,
@@ -12,10 +14,10 @@ CREATE TABLE IF NOT EXISTS dalgo_eval_cases (
   notes         text,
   created_at    timestamptz NOT NULL DEFAULT NOW(),
   updated_at    timestamptz NOT NULL DEFAULT NOW(),
-  updated_by    text NOT NULL DEFAULT 'system'
+  updated_by    text NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS dalgo_eval_cases_case_key_uniq
+CREATE UNIQUE INDEX IF NOT EXISTS dalgo_eval_cases_case_key_idx
   ON dalgo_eval_cases(case_key);
 
 CREATE INDEX IF NOT EXISTS dalgo_eval_cases_bucket_idx
@@ -37,3 +39,5 @@ CREATE TABLE IF NOT EXISTS dalgo_eval_case_versions (
 
 CREATE INDEX IF NOT EXISTS dalgo_eval_case_versions_case_id_idx
   ON dalgo_eval_case_versions(case_id, updated_at DESC);
+
+COMMIT;

@@ -319,10 +319,10 @@ CREATE TABLE IF NOT EXISTS dalgo_eval_cases (
   notes         text,
   created_at    timestamptz NOT NULL DEFAULT NOW(),
   updated_at    timestamptz NOT NULL DEFAULT NOW(),
-  updated_by    text NOT NULL DEFAULT 'system'
+  updated_by    text NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS dalgo_eval_cases_case_key_uniq
+CREATE UNIQUE INDEX IF NOT EXISTS dalgo_eval_cases_case_key_idx
   ON dalgo_eval_cases(case_key);
 
 CREATE INDEX IF NOT EXISTS dalgo_eval_cases_bucket_idx
