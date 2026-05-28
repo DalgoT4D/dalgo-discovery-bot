@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { getEvalCase, listEvalCaseVersions } from '@/lib/db/queries/eval-cases';
 import { EvalCaseEditor, type EvalCaseFormValue } from '@/components/admin/eval-case-editor';
+import { TestCaseButton } from '@/components/admin/test-case-button';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -33,6 +34,7 @@ export default async function EditEvalCasePage({ params }: PageProps) {
       </p>
 
       <EvalCaseEditor initial={initial} mode="edit" caseId={id} />
+      <TestCaseButton caseId={id} />
 
       <section className="mt-12">
         <h2 className="text-lg font-semibold mb-3">Version history ({versions.length})</h2>
