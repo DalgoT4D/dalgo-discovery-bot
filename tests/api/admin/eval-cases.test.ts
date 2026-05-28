@@ -53,7 +53,9 @@ describe('GET /api/admin/eval-cases', () => {
     const res = await POST(req as unknown as Request);
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.id).toMatch(/[0-9a-f-]{36}/);
+    expect(body.case.id).toMatch(/[0-9a-f-]{36}/);
+    expect(body.case.case_key).toBe('api_created');
+    expect(body.case.bucket).toBe('guardrails');
   });
 
   it('POST rejects missing required fields', async () => {
@@ -64,6 +66,26 @@ describe('GET /api/admin/eval-cases', () => {
     });
     const res = await POST(req as unknown as Request);
     expect(res.status).toBe(400);
+  });
+
+  it('POST rejects unknown judge names', async () => {
+    const req = new Request('http://localhost/api/admin/eval-cases', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        case_key: 'api_badjudge',
+        bucket: 'guardrails',
+        input: 'x',
+        expected: {},
+        judges: ['nonexistent-judge'],
+        enabled: true,
+        notes: null,
+      }),
+    });
+    const res = await POST(req as unknown as Request);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/unknown judge/);
   });
 
   afterAll(async () => { await pool().end(); });

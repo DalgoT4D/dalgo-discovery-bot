@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { listEvalCases, createEvalCase } from '@/lib/db/queries/eval-cases';
+import { listEvalCases, createEvalCase, getEvalCase } from '@/lib/db/queries/eval-cases';
 import { invalidateEvalCaseCache } from '@/lib/llm/eval/case-source';
 
 export async function GET(req: Request) {
@@ -44,6 +44,17 @@ export async function POST(req: Request) {
   if (!Array.isArray(body.judges) || body.judges.length === 0)
     return NextResponse.json({ error: 'judges must be a non-empty array' }, { status: 400 });
 
+  const VALID_JUDGES = ['retrieval-judge', 'llm-judge', 'exact-match'] as const;
+  const invalid = (body.judges as unknown[]).filter(
+    (j) => typeof j !== 'string' || !VALID_JUDGES.includes(j as typeof VALID_JUDGES[number]),
+  );
+  if (invalid.length) {
+    return NextResponse.json(
+      { error: `unknown judge(s): ${invalid.join(', ')}. Allowed: ${VALID_JUDGES.join(', ')}` },
+      { status: 400 },
+    );
+  }
+
   const expected = body.expected && typeof body.expected === 'object'
     ? (body.expected as Record<string, unknown>)
     : {};
@@ -60,5 +71,6 @@ export async function POST(req: Request) {
   });
 
   invalidateEvalCaseCache(body.bucket);
-  return NextResponse.json({ id }, { status: 201 });
+  const created = await getEvalCase(id);
+  return NextResponse.json({ case: created }, { status: 201 });
 }
