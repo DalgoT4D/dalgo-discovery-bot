@@ -88,6 +88,9 @@ export default function Landing() {
       }
 
       if (!res.ok) {
+        // Same rationale as the 401 branch: clear any half-set cookie so a
+        // subsequent guest session doesn't appear as admin in the chat header.
+        await signOut({ redirect: false });
         setError('Something went wrong. Please try again.');
         setSubmitting(false);
         return;
