@@ -1,4 +1,4 @@
-import { describe, it, expect, afterAll, vi, beforeEach } from 'vitest';
+import { describe, it, expect, afterAll, afterEach, beforeAll, vi, beforeEach } from 'vitest';
 import 'dotenv/config';
 import { pool, query } from '@/lib/db/client';
 
@@ -18,8 +18,18 @@ function mockReq(): Request {
 }
 
 describe('POST /api/admin-intake', () => {
+  beforeAll(async () => {
+    await query(`DELETE FROM leads    WHERE email LIKE 'admintest+%@example.org'`);
+    await query(`DELETE FROM sessions WHERE email LIKE 'admintest+%@example.org'`);
+  });
+
   beforeEach(() => {
     authMock.mockReset();
+  });
+
+  afterEach(async () => {
+    await query(`DELETE FROM leads    WHERE email LIKE 'admintest+%@example.org'`);
+    await query(`DELETE FROM sessions WHERE email LIKE 'admintest+%@example.org'`);
   });
 
   it('returns 401 when there is no authenticated session', async () => {
