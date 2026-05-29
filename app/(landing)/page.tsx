@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -67,13 +67,36 @@ export default function Landing() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await signIn('admin-credentials', { email, password, redirect: false });
-      if (!result?.ok) {
+      // Set the NextAuth cookie via Credentials. We do NOT trust the return value
+      // (NextAuth v5-beta's client signIn for Credentials with redirect:false
+      // doesn't reliably surface auth failures). The server-side admin-intake
+      // call below is the actual gate.
+      await signIn('admin-credentials', { email, password, redirect: false });
+
+      const res = await fetch('/api/admin-intake', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      });
+
+      if (res.status === 401) {
+        // Clear any half-set cookie so a subsequent guest session doesn't
+        // appear as admin in the chat header.
+        await signOut({ redirect: false });
         setError('Invalid email or password.');
         setSubmitting(false);
         return;
       }
-      await startSession(email);
+
+      if (!res.ok) {
+        setError('Something went wrong. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      const { session_id } = (await res.json()) as { session_id: string };
+      window.localStorage.setItem(LS_SESSION, session_id);
+      window.localStorage.setItem(LS_EMAIL, email);
+      router.push(`/chat/${session_id}`);
     } catch {
       setError('Network error. Please try again.');
       setSubmitting(false);
