@@ -6,6 +6,32 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-29 — Admin sign-in enforcement on chat landing
+
+**Added**
+- `POST /api/admin-intake` — server-authoritative endpoint that calls NextAuth `auth()` and returns 401 if the caller is not in the `admins` table. Landing page's "Sign in as admin" now gates on this endpoint's response instead of trusting NextAuth v5-beta's client `signIn` return value.
+- Test file `tests/api/admin-intake.test.ts` with 4 integration tests (401, create, resume, normalize) plus `beforeAll`/`afterEach` cleanup so it's idempotent.
+
+**Removed**
+- Implicit trust in `signIn('admin-credentials', ...).ok` on the landing page. The cookie-set side effect of `signIn` is still used; the success/failure decision is server-side.
+
+**Why**
+- Bug — visitors could type any random email + password in the landing's admin mode and start a chat. Root cause: NextAuth v5-beta's client `signIn` for Credentials with `redirect: false` does not reliably set `ok: false` on bad credentials, AND `/api/intake` had no auth check, so a failed `signIn` did not block the subsequent session-create. Verified fixed end-to-end via Playwright smoke: bogus creds → "Invalid email or password" + 0 DB rows; real admin creds → admin badge + session+lead rows.
+
+**Eval delta**
+- None — change is in the auth / session-create path, not the LLM pipeline.
+
+**Carried forward / next**
+- `/api/intake` remains open for guest sessions (intentional). No `sessions.is_admin` column — admin test chats still appear in `/admin/conversations` and `/admin/leads` alongside guest chats; follow-up if the noise becomes a problem.
+- Branch `feat/blog-ingestion` still not pushed.
+
+**Refs**
+- Spec: `docs/superpowers/specs/2026-05-29-admin-signin-enforcement-design.md`
+- Plan: `docs/superpowers/plans/2026-05-29-admin-signin-enforcement.md`
+- Branch: `feat/blog-ingestion`
+
+---
+
 ## 2026-05-26 — Admin-editable prompts + wrong-answer feedback loop
 
 **Added**
