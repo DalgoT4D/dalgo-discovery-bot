@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const CATEGORIES = [
   'data_sources',
@@ -16,6 +18,7 @@ const CATEGORIES = [
   'mission',
   'stack',
   'limitations',
+  'case_studies',
 ];
 
 type FormState = {
@@ -28,7 +31,13 @@ type FormState = {
   notes_for_sales: string;
 };
 
-export function KbEditor({ id }: { id: string }) {
+export function KbEditor({
+  id,
+  onSaved,
+}: {
+  id: string;
+  onSaved?: (item: any) => void;
+}) {
   const isNew = id === 'new';
   const router = useRouter();
   const [loading, setLoading] = useState(!isNew);
@@ -45,8 +54,13 @@ export function KbEditor({ id }: { id: string }) {
   useEffect(() => {
     if (isNew) return;
     fetch(`/api/admin/kb/${id}`)
-      .then((r) => r.json())
-      .then((d) => {
+      .then(async (r) => {
+        if (!r.ok) {
+          console.error('[KbEditor] failed to load KB row', id, r.status);
+          setLoading(false);
+          return;
+        }
+        const d = await r.json();
         const it = d.item;
         setForm({
           category: it.category,
@@ -57,6 +71,10 @@ export function KbEditor({ id }: { id: string }) {
           evidence: (it.evidence ?? []).join('\n'),
           notes_for_sales: it.notes_for_sales ?? '',
         });
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.error('[KbEditor] failed to load KB row', id, e);
         setLoading(false);
       });
   }, [id, isNew]);
@@ -83,8 +101,16 @@ export function KbEditor({ id }: { id: string }) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    if (res.ok) router.push('/admin/kb');
-    else alert('Save failed');
+    if (res.ok) {
+      if (onSaved) {
+        const data = await res.json();
+        onSaved(data.item);
+      } else {
+        router.push('/admin/kb');
+      }
+    } else {
+      alert('Save failed');
+    }
   }
 
   async function remove() {
@@ -98,11 +124,11 @@ export function KbEditor({ id }: { id: string }) {
   return (
     <form onSubmit={submit} className="space-y-4 max-w-2xl">
       <div>
-        <label className="block text-sm font-medium">Category</label>
+        <label className="block text-sm font-medium text-foreground">Category</label>
         <select
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
         >
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -112,11 +138,11 @@ export function KbEditor({ id }: { id: string }) {
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium">Status</label>
+        <label className="block text-sm font-medium text-foreground">Status</label>
         <select
           value={form.status}
           onChange={(e) => setForm({ ...form, status: e.target.value })}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
         >
           {['yes', 'partial', 'no', 'roadmap'].map((s) => (
             <option key={s} value={s}>
@@ -126,59 +152,58 @@ export function KbEditor({ id }: { id: string }) {
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium">Question variants (one per line)</label>
+        <label className="block text-sm font-medium text-foreground">Question variants (one per line)</label>
         <textarea
           value={form.question_variants}
           onChange={(e) => setForm({ ...form, question_variants: e.target.value })}
           rows={4}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">Canonical answer</label>
+        <label className="block text-sm font-medium text-foreground">Canonical answer</label>
         <textarea
           value={form.canonical_answer}
           onChange={(e) => setForm({ ...form, canonical_answer: e.target.value })}
           rows={6}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
           required
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">NGO framing</label>
-        <input
+        <label className="block text-sm font-medium text-foreground">NGO framing</label>
+        <Input
           value={form.ngo_framing}
           onChange={(e) => setForm({ ...form, ngo_framing: e.target.value })}
-          className="border rounded p-2 w-full"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">Evidence (one per line)</label>
+        <label className="block text-sm font-medium text-foreground">Evidence (one per line)</label>
         <textarea
           value={form.evidence}
           onChange={(e) => setForm({ ...form, evidence: e.target.value })}
           rows={3}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
         />
       </div>
       <div>
-        <label className="block text-sm font-medium">Notes for sales (internal-only)</label>
+        <label className="block text-sm font-medium text-foreground">Notes for sales (internal-only)</label>
         <textarea
           value={form.notes_for_sales}
           onChange={(e) => setForm({ ...form, notes_for_sales: e.target.value })}
           rows={2}
-          className="border rounded p-2 w-full"
+          className="border border-border rounded-md p-2 w-full bg-card text-foreground"
         />
       </div>
       <div className="flex gap-2">
-        <button type="submit" className="bg-slate-900 text-white px-4 py-2 rounded">
+        <Button type="submit" variant="primary">
           Save
-        </button>
+        </Button>
         {!isNew && (
           <button
             type="button"
             onClick={remove}
-            className="bg-red-600 text-white px-4 py-2 rounded"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-red-600 px-4 text-[15px] font-medium text-white transition-colors hover:bg-red-600/90"
           >
             Delete
           </button>

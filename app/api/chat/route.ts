@@ -4,10 +4,12 @@ import { anthropic, MODEL } from '@/lib/llm/client';
 import { staticSystem, ngoContextBlock } from '@/lib/llm/system-prompt';
 import { getSession } from '@/lib/db/queries/sessions';
 import { listMessages, appendMessage } from '@/lib/db/queries/messages';
+import { query } from '@/lib/db/client';
 import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { emit } from '@/lib/telemetry';
 import { getOrCreateIntro } from '@/lib/llm/intro-generator';
+import { runPipeline, type RetrievalTrace } from '@/lib/llm/rag/pipeline';
 
 export async function GET(req: NextRequest) {
   const session_id = req.nextUrl.searchParams.get('session_id');
@@ -87,14 +89,34 @@ export async function POST(req: NextRequest) {
     data_types: session.data_types,
   });
 
+  // Pre-retrieve via the RAG pipeline before streaming, so the model has
+  // top passages in context from the first token. If retrieval fails for any
+  // reason, fall back to the un-augmented prompt — tools remain available.
+  let prePassages: string[] = [];
+  let trace: RetrievalTrace | null = null;
+  if (typeof message === 'string' && message.length > 5) {
+    try {
+      const pipelineResult = await runPipeline(message);
+      prePassages = pipelineResult.topPassages.map((p) => p.text);
+      trace = pipelineResult.trace;
+    } catch (e) {
+      console.error('[chat] pipeline failed:', e);
+    }
+  }
+  const retrievalBlock =
+    prePassages.length > 0
+      ? `## Retrieved context for this turn\n${prePassages.join('\n\n---\n\n')}\n\nUse the above as primary evidence. Tools remain available if you need additional lookup.`
+      : null;
+
   const systemMessages: CoreMessage[] = [
     {
       role: 'system',
-      content: staticSystem(),
+      content: await staticSystem(),
       providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' } } },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any,
     ...(ngoBlock ? [{ role: 'system' as const, content: ngoBlock }] : []),
+    ...(retrievalBlock ? [{ role: 'system' as const, content: retrievalBlock }] : []),
   ];
 
   const result = streamText({
@@ -103,7 +125,20 @@ export async function POST(req: NextRequest) {
     tools: buildToolset(session_id),
     maxSteps: 6,
     onFinish: async ({ text, usage }) => {
-      await appendMessage(session_id, 'assistant', { text }, usage?.completionTokens);
+      const assistantRow = await appendMessage(
+        session_id,
+        'assistant',
+        { text },
+        usage?.completionTokens,
+      );
+      if (trace) {
+        await query(
+          `UPDATE messages
+              SET retrieval_trace = $1::jsonb
+            WHERE id = $2`,
+          [JSON.stringify(trace), assistantRow.id],
+        );
+      }
       await emit(
         'message_sent',
         { role: 'assistant', tokens: usage?.completionTokens ?? null },

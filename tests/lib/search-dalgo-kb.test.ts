@@ -1,6 +1,6 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import 'dotenv/config';
-import { searchKb } from '@/lib/db/queries/kb';
+import { searchKb, lexicalSearchKb } from '@/lib/db/queries/kb';
 import { pool, query } from '@/lib/db/client';
 
 const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
@@ -26,6 +26,19 @@ describe('searchKb', () => {
   it('module exports the expected shape', () => {
     expect(typeof searchKb).toBe('function');
   });
-
-  afterAll(async () => { await pool().end(); });
 });
+
+describe('lexicalSearchKb', () => {
+  it('returns ranked hits for keyword query', async () => {
+    const { rows } = await query('SELECT COUNT(*)::int AS c FROM dalgo_knowledge_base');
+    if ((rows[0] as { c: number }).c === 0) return;
+
+    const hits = await lexicalSearchKb('pricing', 5);
+    if (hits.length > 0) {
+      expect(typeof hits[0].rank).toBe('number');
+      expect(hits[0]).toHaveProperty('canonical_answer');
+    }
+  });
+});
+
+afterAll(async () => { await pool().end(); });

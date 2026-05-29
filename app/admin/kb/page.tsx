@@ -5,13 +5,21 @@ export default function KbListPage() {
   return (
     <div className="space-y-4">
       <header className="flex justify-between items-center">
-        <h2 className="text-2xl">Knowledge Base</h2>
-        <Link
-          href="/admin/kb/new"
-          className="bg-slate-900 text-white px-3 py-2 rounded text-sm"
-        >
-          New entry
-        </Link>
+        <h1 className="text-2xl font-semibold text-foreground">Knowledge Base</h1>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/kb/import"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-primary px-4 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
+          >
+            Import via paste
+          </Link>
+          <Link
+            href="/admin/kb/new"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            New entry
+          </Link>
+        </div>
       </header>
       <KbTable />
     </div>

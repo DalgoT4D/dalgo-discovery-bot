@@ -68,7 +68,7 @@ export const limitations: KbSeed[] = [
     category: 'limitations',
     question_variants: ['Does Dalgo support custom chart types beyond the built-in 6?'],
     canonical_answer:
-      'Only bar/line/pie/number/table/map. For richer visuals, use the optional embedded Superset.',
+      'Dalgo Native ships 6 chart types: bar, line, pie, number/KPI card, table, choropleth map. For other chart types, point a 3rd-party visualization tool at your Dalgo warehouse — common choices include the Superset add-on (₹48,000/year, hosted by Dalgo, 40+ chart types) or Power BI / Looker / Tableau if your team already uses one.',
     status: 'no',
     evidence: ['webapp_v2/components/charts/'],
     source_audit_date: '2026-05-21',

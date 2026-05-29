@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createLead } from '@/lib/db/queries/leads';
+import { insertLead } from '@/lib/db/queries/leads';
 import { getSession } from '@/lib/db/queries/sessions';
 import { postHotLead } from '@/lib/slack';
 import { emit } from '@/lib/telemetry';
@@ -20,7 +20,12 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'session not found' }, { status: 404 });
   }
-  const lead = await createLead(body.session_id, body.email, body.intent, body.summary);
+  const lead = await insertLead({
+    sessionId: body.session_id,
+    email: body.email,
+    intent: body.intent,
+    summary: body.summary,
+  });
   await emit(
     'lead_captured',
     { intent: body.intent, source_cta: 'chat_banner' },

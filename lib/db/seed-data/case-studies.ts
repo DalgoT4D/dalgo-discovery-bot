@@ -42,7 +42,7 @@ export const caseStudies: KbSeed[] = [
       'Can Dalgo work for international NGOs?',
     ],
     canonical_answer:
-      'Yes. SHOFCO (Shining Hope for Communities), founded by Kennedy Odede in Kibera, Kenya, runs Dalgo to support 2.4M+ people across Kenyan urban slums — including row-level-security dashboards for caseworkers across Safehouse, WASH, Gender, and Education programs. STiR Education also runs Dalgo across 6 international regions reaching 12+ million children.',
+      'Yes. SHOFCO (Shining Hope for Communities), founded by Kennedy Odede in Kibera, Kenya, runs Dalgo to support 2.4M+ people across Kenyan urban slums — including caseworker dashboards across Safehouse, WASH, Gender, and Education programs — using row-level security via the Superset add-on so each worker sees only their caseload. STiR Education also runs Dalgo across 6 international regions reaching 12+ million children.',
     status: 'yes',
     evidence: [
       'https://projecttech4dev.org/shining-hope-from-within-shofcos-empowerment-story-with-dalgo/',
@@ -190,7 +190,7 @@ export const caseStudies: KbSeed[] = [
       'What did Dalgo do for SHOFCO?',
     ],
     canonical_answer:
-      'SHOFCO had centralised on CommCare in 2023 but case-workers reverted to "paper records, pinned charts, and ad hoc Google Sheets". They\'d also been running Airbyte–dbt–Power BI on AWS at high cost. Dalgo ingests from CommCare + Google Sheets + APIs (Mobiwater, planned: LMS, Monday.com, Susteq), transforms via dbt, and powers Superset dashboards with **row-level security** for caseworkers. Outcomes: MEL teams went from **12+ hours/week of data work to ~2 hours/week**; caseworkers save ~3 hours/week and reports that took half a day now generate in minutes. Dalgo provided 40+ hours of in-person training.',
+      'SHOFCO had centralised on CommCare in 2023 but case-workers reverted to "paper records, pinned charts, and ad hoc Google Sheets". They\'d also been running Airbyte–dbt–Power BI on AWS at high cost. Dalgo ingests from CommCare + Google Sheets + APIs (Mobiwater, planned: LMS, Monday.com, Susteq), transforms via dbt, and powers Superset dashboards (the Superset add-on, separate from Dalgo Native) with **row-level security** for caseworkers — each worker sees only their own caseload. Outcomes: MEL teams went from **12+ hours/week of data work to ~2 hours/week**; caseworkers save ~3 hours/week and reports that took half a day now generate in minutes. Dalgo provided 40+ hours of in-person training.',
     status: 'yes',
     evidence: [
       'https://projecttech4dev.org/shining-hope-from-within-shofcos-empowerment-story-with-dalgo/',
@@ -322,9 +322,8 @@ export const caseStudies: KbSeed[] = [
       'Can different users see different data in the same dashboard?',
     ],
     canonical_answer:
-      'Yes for some customers — SHOFCO\'s Dalgo deployment ships row-level-security dashboards where each caseworker only sees their own caseload. This is in the Dalgo 2.0 roadmap as a "Fine-grained Access Control (Alpha)" feature; production usage at SHOFCO suggests it\'s available with implementation support.',
-    status: 'partial',
-    notes_for_sales: 'Confirm whether row-level security is generally available or per-customer custom work.',
+      'No — row-level security (RLS) is not a Dalgo feature. Dalgo\'s own RBAC is workspace-level (org-level + per-user roles like Account Manager / Pipeline Manager / Analyst / Guest), not per-row data scoping. NGOs that need RLS (e.g., SHOFCO\'s caseworker dashboards where each worker sees only their caseload) run it via the Superset add-on, which provides RLS. Superset is a separate optional Dalgo add-on at ₹48,000/year.',
+    status: 'no',
     evidence: [
       'https://projecttech4dev.org/shining-hope-from-within-shofcos-empowerment-story-with-dalgo/',
       'https://projecttech4dev.org/dalgo-2-0-from-pipelines-to-actionable-insights/',

@@ -1,13 +1,13 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import 'dotenv/config';
-import { runAll } from '@/lib/llm/eval/runner';
+import { runLegacyAll } from '@/lib/llm/eval/runner';
 import { pool } from '@/lib/db/client';
 
 const canRun = Boolean(process.env.ANTHROPIC_API_KEY) && Boolean(process.env.OPENAI_API_KEY);
 
 describe('eval suite', () => {
   it.skipIf(!canRun)('passes at least 95% of cases', async () => {
-    const results = await runAll();
+    const results = await runLegacyAll();
     const pass = results.filter((r) => r.passed).length;
     const rate = pass / results.length;
     // eslint-disable-next-line no-console
