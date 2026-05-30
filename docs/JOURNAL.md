@@ -6,6 +6,34 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-30 — Guided eval-case editor
+
+**Added**
+- `lib/eval-case-templates.ts` — pure data + helpers (bucket templates, judge metadata, case-key suggestion, expected-object cleanup).
+- `components/admin/eval-case-form-fields.tsx` — visual form fields for the Expected object, driven by which judges are checked.
+- `components/admin/eval-case-help-panel.tsx` — context-aware right-side panel with judge descriptions, real seed examples, and a "Load this example" button.
+- Two-column layout on `/admin/evals/new` and `/admin/evals/[id]`. Bucket dropdown now applies a template (judges + expected defaults). Case-key auto-fill on bucket change with inline duplicate warning. JSON textarea preserved behind an "Edit JSON directly" toggle.
+
+**Removed**
+- The free-form-JSON-only authoring UX on the eval-case editor. Power-user JSON editing is still available behind the toggle; the default is a guided form.
+
+**Why**
+- Non-technical reviewers couldn't author eval cases without reading the seed `.ts` files to figure out which expected fields each judge consumes. The guided form encodes that knowledge in the UI.
+
+**Eval delta**
+- None — change is in the authoring UI, not the eval pipeline.
+
+**Carried forward / next**
+- `must_retrieve_blog_mentioning` is exposed in the form as "advisory" because the runner doesn't consume it. If we want it enforced, add a check in `lib/llm/eval/judges/retrieval-judge.ts`.
+- Guardrails template still uses `[retrieval-judge, llm-judge]` to match seed cases, even though `must_record_unanswered` is only enforced by `exact-match`. Fix at the seed level, not the template.
+- Component tests for `eval-case-editor.tsx` deferred — `@testing-library/react` is not installed and per the plan we don't add it unilaterally. Helper-module behavior is covered by `tests/lib/eval-case-templates.test.ts` (20 tests).
+
+**Refs**
+- Spec: `docs/superpowers/specs/2026-05-30-guided-eval-case-editor-design.md`
+- Plan: `docs/superpowers/plans/2026-05-30-guided-eval-case-editor.md`
+
+---
+
 ## 2026-05-29 — Admin sign-in enforcement on chat landing
 
 **Added**
