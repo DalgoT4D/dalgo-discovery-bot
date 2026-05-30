@@ -73,20 +73,20 @@ Same UI as today: checkboxes for `retrieval-judge`, `llm-judge`, `exact-match`. 
 
 The textarea is replaced by labelled inputs that appear conditionally based on which judges are checked.
 
-**Retrieval-judge fields:**
+Field ownership comes from what each judge actually reads in `lib/llm/eval/judges/*.ts` at HEAD:
+
+**Retrieval-judge fields** (reads `must_cite_one_of`, `must_not_hallucinate_urls`, `matched_pattern`):
 - `must_cite_one_of` — chip-list URL input. Label: "URLs the answer must include (at least one)". User pastes a URL and presses Enter or clicks "Add"; chips are removable. Stored as `string[]`.
 - `must_not_hallucinate_urls` — toggle. Label: "Reject any URL the bot invents (not in the retrieved sources)".
-- `must_retrieve_blog_mentioning` — text input. Label: "At least one retrieved blog chunk must contain this term".
 - `matched_pattern` — text input. Label: "Expected problem-pattern slug" (with helper text linking to `lib/db/seed-data/problem-patterns.ts`).
-- `must_record_unanswered` — toggle. Label: "An `unanswered_questions` row should be created for this question".
+- `must_retrieve_blog_mentioning` — text input. Label: "At least one retrieved blog chunk must contain this term". **Note:** This field is set on the seed `tool-names` cases but the runner does not currently consume it. We still expose the input so existing cases can be edited round-trip without data loss; the help-panel description should call this out as "advisory: not enforced by the current runner".
 
-**LLM-judge fields:**
+**LLM-judge fields** (reads `structure`, `must_express_uncertainty`):
 - `must_express_uncertainty` — toggle. Label: "Bot must say 'not sure' or equivalent".
 - `structure` — three checkboxes for `problem_framing`, `dalgo_approach`, `evidence`. Label: "Required sections of the 3-part consultant reply". Checked sections are kept in order `[problem_framing, dalgo_approach, evidence]`.
 
-**Exact-match fields:**
-- `matched_pattern` — text input. Label: "Literal substring that must appear in the response".
-   - If retrieval-judge is also checked, the same `matched_pattern` field is shared (one input, both judges read it). This matches how the field works in seed data today.
+**Exact-match fields** (reads `must_record_unanswered` only — confirmed in `lib/llm/eval/judges/exact-match.ts`):
+- `must_record_unanswered` — toggle. Label: "An `unanswered_questions` row must be created for this question".
 
 Empty/falsy values (empty string, empty array, `false`) are **stripped** from `value.expected` on save so we don't bloat the DB row with `false`/`""` entries the judges would ignore anyway.
 
