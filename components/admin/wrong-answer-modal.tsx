@@ -51,16 +51,29 @@ export function WrongAnswerModal({
     }
   }
 
-  async function patchFixed(kbId: string) {
-    if (!reportId) return;
+  async function patchFixed(kbId: string): Promise<boolean> {
+    if (!reportId) return false;
     const res = await fetch(`/api/admin/wrong-answers/${reportId}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ fixed_kb_id: kbId }),
     });
+    if (res.status === 401) {
+      // The KB edit itself already succeeded (KbEditor handled that
+      // separately). Only the audit link from report → fixed_kb_id is
+      // missing. Keep the modal open and surface a friendly re-sign-in
+      // CTA — when the user signs back in and hits Save in the editor
+      // again, patchFixed will retry and the link will be written.
+      const here = typeof window !== 'undefined' ? window.location.pathname : '/';
+      setError(`AUTH:${here}`);
+      return false;
+    }
     if (!res.ok) {
       console.error('[WrongAnswerModal] patchFixed failed', res.status);
+      setError(`Failed to link report to KB fix: HTTP ${res.status}`);
+      return false;
     }
+    return true;
   }
 
   return (
@@ -166,8 +179,11 @@ export function WrongAnswerModal({
           <KbEditor
             id={chosen.kb_id}
             onSaved={async () => {
-              await patchFixed(chosen.kb_id);
-              onClose();
+              const ok = await patchFixed(chosen.kb_id);
+              if (ok) onClose();
+              // If !ok, the friendly error banner is now showing at the
+              // top of the modal — leave it open so the user can re-sign-in
+              // and re-trigger Save (patchFixed is idempotent).
             }}
           />
         )}
