@@ -63,6 +63,19 @@ describe('POST /api/intake', () => {
     expect(leadRows[0]?.count).toBe('1');
   });
 
+  it('marks the created session row as is_admin = false (guest)', async () => {
+    const email = `guest+isadmin+${Date.now()}@example.org`;
+    const res = await POST(mockReq({ email }) as any);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+
+    const { rows } = await query<{ is_admin: boolean }>(
+      `SELECT is_admin FROM sessions WHERE id = $1`,
+      [json.session_id],
+    );
+    expect(rows[0]?.is_admin).toBe(false);
+  });
+
   it('rejects payloads without a valid email', async () => {
     const res = await POST(mockReq({ email: 'not-an-email' }) as any);
     expect(res.status).toBe(400);

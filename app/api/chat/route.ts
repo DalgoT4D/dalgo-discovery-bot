@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
     greeting,
     starters: intro.starters,
     ready: true,
+    is_admin: Boolean(session.is_admin),
+    email: session.email ?? null,
   });
 }
 

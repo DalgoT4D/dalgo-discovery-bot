@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { rows } = await query<{ id: string }>(
-    `INSERT INTO sessions (ip, email) VALUES ($1, $2) RETURNING id`,
+    `INSERT INTO sessions (ip, email, is_admin) VALUES ($1, $2, true) RETURNING id`,
     [ip, email],
   );
   const sessionId = rows[0].id;

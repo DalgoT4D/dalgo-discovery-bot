@@ -98,6 +98,21 @@ describe('POST /api/admin-intake', () => {
     expect(leadRows[0]?.count).toBe('1');
   });
 
+  it('marks the created session row as is_admin = true', async () => {
+    const email = `admintest+isadmin+${Date.now()}@example.org`;
+    authMock.mockResolvedValue({ user: { email } });
+
+    const res = await POST(mockReq() as any);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+
+    const { rows } = await query<{ is_admin: boolean }>(
+      `SELECT is_admin FROM sessions WHERE id = $1`,
+      [json.session_id],
+    );
+    expect(rows[0]?.is_admin).toBe(true);
+  });
+
   it('lowercases and trims the email from the auth session', async () => {
     const raw = `  ADMINTEST+CASE+${Date.now()}@Example.Org  `;
     const normalized = raw.toLowerCase().trim();
