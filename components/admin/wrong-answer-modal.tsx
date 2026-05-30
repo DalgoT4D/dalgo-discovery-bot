@@ -30,6 +30,15 @@ export function WrongAnswerModal({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ message_id: messageId, reason }),
       });
+      if (res.status === 401) {
+        // Admin badge on the chat is bound to sessions.is_admin (DB), but
+        // admin-only actions still need an active NextAuth session. When the
+        // cookie has aged out (or was never set in this browser), surface a
+        // clear re-sign-in CTA rather than a generic HTTP error.
+        const here = typeof window !== 'undefined' ? window.location.pathname : '/';
+        setError(`AUTH:${here}`);
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setReportId(json.id);
@@ -80,7 +89,20 @@ export function WrongAnswerModal({
           </button>
         </div>
 
-        {error && <div className="text-sm text-red-600">{error}</div>}
+        {error?.startsWith('AUTH:') ? (
+          <div className="text-sm text-red-600">
+            Your admin session has expired.{' '}
+            <a
+              href={`/signin?callbackUrl=${encodeURIComponent(error.slice('AUTH:'.length))}`}
+              className="underline font-medium"
+            >
+              Sign in again
+            </a>{' '}
+            to use admin actions.
+          </div>
+        ) : (
+          error && <div className="text-sm text-red-600">{error}</div>
+        )}
 
         {stage === 'reason' && (
           <div className="space-y-3">

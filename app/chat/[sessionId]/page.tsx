@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { ChatStream, type ChatStreamHandle, type InitialMessage } from '@/components/chat-stream';
 import { SiteHeader } from '@/components/site-header';
 
@@ -39,6 +40,16 @@ export default function ChatPage() {
   const isAdmin = Boolean(meta?.is_admin);
   const adminEmail = isAdmin ? (meta?.email ?? null) : null;
 
+  // The admin BADGE is driven by sessions.is_admin (in DB), but admin-only
+  // ACTIONS still require an active NextAuth session. When those fall out
+  // of sync — chat session marked admin, but NextAuth cookie missing /
+  // expired — admin actions silently 401. Surface a re-sign-in CTA up front
+  // so the user knows what to do instead of discovering it via a broken
+  // button click.
+  const { status: authStatus } = useSession();
+  const needsResignin = isAdmin && authStatus === 'unauthenticated';
+  const signinHref = `/signin?callbackUrl=${encodeURIComponent(`/chat/${sessionId}`)}`;
+
   return (
     <div className="flex h-screen flex-col bg-background">
       <SiteHeader
@@ -47,6 +58,15 @@ export default function ChatPage() {
         showAdminBadge={isAdmin}
         adminEmail={adminEmail ?? undefined}
       />
+      {needsResignin && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+          <span className="font-medium">Admin session expired.</span> You can still chat, but
+          admin actions (report wrong answer, view retrieval debug, promote to KB) need a fresh sign-in.{' '}
+          <a href={signinHref} className="underline font-medium">
+            Sign in again →
+          </a>
+        </div>
+      )}
       <main className="flex-1 overflow-hidden">
         {meta !== null && (
           <ChatStream
