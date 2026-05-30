@@ -2,6 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import 'dotenv/config';
 import { searchKb, lexicalSearchKb } from '@/lib/db/queries/kb';
 import { pool, query } from '@/lib/db/client';
+import { searchDalgoKbTool } from '@/lib/llm/tools/search-dalgo-kb';
 
 const hasOpenAi = Boolean(process.env.OPENAI_API_KEY);
 
@@ -25,6 +26,12 @@ describe('searchKb', () => {
 
   it('module exports the expected shape', () => {
     expect(typeof searchKb).toBe('function');
+  });
+
+  it('searchDalgoKbTool accepts case_studies in its category enum', () => {
+    const tool = searchDalgoKbTool('session-test');
+    const parsed = tool.parameters.safeParse({ query: 'who uses dalgo', category: 'case_studies' });
+    expect(parsed.success).toBe(true);
   });
 });
 
