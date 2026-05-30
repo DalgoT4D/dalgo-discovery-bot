@@ -19,6 +19,7 @@ const CATEGORIES = [
   'stack',
   'limitations',
   'case_studies',
+  'community',
 ] as const;
 
 export function searchDalgoKbTool(sessionId: string) {

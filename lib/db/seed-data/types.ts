@@ -2,7 +2,8 @@ export type KbStatus = 'yes' | 'partial' | 'no' | 'roadmap';
 export type KbCategory =
   | 'data_sources' | 'transforms' | 'dashboards' | 'orchestration'
   | 'ai' | 'sharing' | 'rbac' | 'security' | 'deployment'
-  | 'pricing' | 'mission' | 'stack' | 'limitations' | 'case_studies';
+  | 'pricing' | 'mission' | 'stack' | 'limitations' | 'case_studies'
+  | 'community';
 
 export interface KbSeed {
   category: KbCategory;

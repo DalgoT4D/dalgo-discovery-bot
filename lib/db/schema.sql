@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS dalgo_knowledge_base (
   category          text NOT NULL CHECK (category IN (
                       'data_sources','transforms','dashboards','orchestration',
                       'ai','sharing','rbac','security','deployment',
-                      'pricing','mission','stack','limitations','case_studies')),
+                      'pricing','mission','stack','limitations','case_studies','community')),
   question_variants text[] NOT NULL,
   canonical_answer  text NOT NULL,
   status            text NOT NULL CHECK (status IN ('yes','partial','no','roadmap')),
@@ -130,7 +130,7 @@ ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_category_ch
   CHECK (category IN (
     'data_sources','transforms','dashboards','orchestration',
     'ai','sharing','rbac','security','deployment',
-    'pricing','mission','stack','limitations','case_studies'
+    'pricing','mission','stack','limitations','case_studies','community'
   ));
 
 CREATE TABLE IF NOT EXISTS dalgo_blog_articles (
