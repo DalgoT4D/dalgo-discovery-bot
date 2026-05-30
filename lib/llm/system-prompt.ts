@@ -1,14 +1,15 @@
 import { getPrompt } from '@/lib/llm/prompts';
+import { buildToolsInventory } from '@/lib/llm/tools-inventory';
 
 export async function staticSystem(): Promise<string> {
-  const [identity, tools, rules, consultant, boundary, fit] = await Promise.all([
+  const [identity, rules, consultant, boundary, fit] = await Promise.all([
     getPrompt('identity'),
-    getPrompt('tools_inventory'),
     getPrompt('rules'),
     getPrompt('consultant_mode'),
     getPrompt('dalgo_vs_3rd_party'),
     getPrompt('fit_assessment'),
   ]);
+  const tools = buildToolsInventory();
   return [identity, tools, rules, consultant, boundary, fit].join('\n\n');
 }
 

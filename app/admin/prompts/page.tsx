@@ -1,19 +1,28 @@
 import Link from 'next/link';
 import { query } from '@/lib/db/client';
 import { PROMPT_SECTION_TITLES, PROMPT_SECTION_ORDER } from '@/lib/admin/prompt-sections';
+import { buildToolsInventory } from '@/lib/llm/tools-inventory';
 
 type Row = {
   key: string;
   content: string;
   updated_by: string;
   updated_at: string;
+  read_only?: boolean;
 };
 
 export default async function PromptsListPage() {
   const { rows } = await query<Row>(
     `SELECT key, content, updated_by, updated_at FROM dalgo_prompts`,
   );
-  const byKey = new Map(rows.map((r) => [r.key, r]));
+  const byKey = new Map<string, Row>(rows.map((r) => [r.key, r]));
+  byKey.set('tools_inventory', {
+    key: 'tools_inventory',
+    content: buildToolsInventory(),
+    updated_by: 'auto-generated from lib/llm/tools/',
+    updated_at: new Date().toISOString(),
+    read_only: true,
+  });
   const ordered = PROMPT_SECTION_ORDER.map((k) => byKey.get(k)).filter((r): r is Row => Boolean(r));
 
   return (
@@ -34,9 +43,14 @@ export default async function PromptsListPage() {
               <div className="flex items-baseline justify-between">
                 <h3 className="font-medium text-foreground">
                   {PROMPT_SECTION_TITLES[p.key] ?? p.key}
+                  {p.read_only && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground border border-border rounded px-1.5 py-0.5">
+                      read-only
+                    </span>
+                  )}
                 </h3>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(p.updated_at).toLocaleString()} · {p.updated_by}
+                  {p.read_only ? p.updated_by : `${new Date(p.updated_at).toLocaleString()} · ${p.updated_by}`}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 font-mono">

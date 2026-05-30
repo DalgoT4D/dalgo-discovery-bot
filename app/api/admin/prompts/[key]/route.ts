@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { query, withClient } from '@/lib/db/client';
 import { invalidatePromptCache } from '@/lib/llm/prompts';
+import { buildToolsInventory } from '@/lib/llm/tools-inventory';
 import { z } from 'zod';
+
+const READ_ONLY_KEYS = new Set(['tools_inventory']);
 
 type PromptRow = {
   key: string;
@@ -18,6 +21,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ key
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { key } = await params;
 
+  if (key === 'tools_inventory') {
+    return NextResponse.json({
+      item: {
+        key,
+        content: buildToolsInventory(),
+        updated_by: 'auto-generated from lib/llm/tools/',
+        updated_at: new Date(0).toISOString(),
+        read_only: true,
+      },
+    });
+  }
+
   const { rows } = await query(
     `SELECT key, content, updated_by, updated_at FROM dalgo_prompts WHERE key = $1`,
     [key],
@@ -30,6 +45,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ key:
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { key } = await params;
+
+  if (READ_ONLY_KEYS.has(key)) {
+    return NextResponse.json(
+      { error: 'read-only', detail: `'${key}' is auto-generated and cannot be edited` },
+      { status: 403 },
+    );
+  }
 
   let body: { content: string };
   try {

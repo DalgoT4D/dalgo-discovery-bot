@@ -8,6 +8,7 @@ type Prompt = {
   content: string;
   updated_by: string;
   updated_at: string;
+  read_only?: boolean;
 };
 
 type Version = {
@@ -80,6 +81,25 @@ export function PromptEditor({ promptKey }: { promptKey: string }) {
 
   if (!prompt) return <p>Loading…</p>;
   const dirty = draft !== prompt.content;
+
+  if (prompt.read_only) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Auto-generated — read-only</p>
+          <p className="mt-1">
+            This section is derived from the tools registered in <code className="font-mono">lib/llm/tools/</code>.
+            To change it, add/remove/rename a tool in code; the section updates on the next chat request.
+          </p>
+        </div>
+        <textarea
+          value={prompt.content}
+          readOnly
+          className="w-full font-mono text-sm border border-border rounded-md p-3 min-h-[40vh] resize-y bg-muted text-foreground cursor-not-allowed"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-[1fr_22rem] gap-6">

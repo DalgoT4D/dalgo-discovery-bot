@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db/client';
+import { buildToolsInventory } from '@/lib/llm/tools-inventory';
 
 export async function GET(_req: NextRequest) {
   const session = await auth();
@@ -16,5 +17,15 @@ export async function GET(_req: NextRequest) {
        FROM dalgo_prompts
        ORDER BY key`,
   );
-  return NextResponse.json({ items: rows });
+  const items = rows.map((r) =>
+    r.key === 'tools_inventory'
+      ? {
+          ...r,
+          content: buildToolsInventory(),
+          updated_by: 'auto-generated from lib/llm/tools/',
+          read_only: true,
+        }
+      : r,
+  );
+  return NextResponse.json({ items });
 }

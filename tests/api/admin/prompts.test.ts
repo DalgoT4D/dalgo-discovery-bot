@@ -42,6 +42,16 @@ describe('GET /api/admin/prompts/[key]', () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it('returns auto-generated content for tools_inventory with read_only=true', async () => {
+    const res = await oneGet(req('http://t/api/admin/prompts/tools_inventory') as any, {
+      params: Promise.resolve({ key: 'tools_inventory' }),
+    });
+    const json = await res.json();
+    expect(json.item.key).toBe('tools_inventory');
+    expect(json.item.read_only).toBe(true);
+    expect(json.item.content).toContain('search_dalgo_kb');
+  });
 });
 
 describe('PUT /api/admin/prompts/[key]', () => {
@@ -49,7 +59,7 @@ describe('PUT /api/admin/prompts/[key]', () => {
 
   beforeEach(async () => {
     const { rows } = await query<{ content: string }>(
-      `SELECT content FROM dalgo_prompts WHERE key = 'tools_inventory'`,
+      `SELECT content FROM dalgo_prompts WHERE key = 'identity'`,
     );
     originalContent = rows[0].content;
   });
@@ -57,7 +67,7 @@ describe('PUT /api/admin/prompts/[key]', () => {
   afterEach(async () => {
     if (originalContent) {
       await query(
-        `UPDATE dalgo_prompts SET content = $1 WHERE key = 'tools_inventory'`,
+        `UPDATE dalgo_prompts SET content = $1 WHERE key = 'identity'`,
         [originalContent],
       );
     }
@@ -65,35 +75,35 @@ describe('PUT /api/admin/prompts/[key]', () => {
 
   it('updates the prompt AND appends a version row in one transaction', async () => {
     const versionsBefore = await query<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'tools_inventory'`,
+      `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'identity'`,
     );
 
     const res = await onePut(
-      req('http://t/api/admin/prompts/tools_inventory', {
+      req('http://t/api/admin/prompts/identity', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ content: 'updated-by-test' }),
       }) as any,
-      { params: Promise.resolve({ key: 'tools_inventory' }) },
+      { params: Promise.resolve({ key: 'identity' }) },
     );
     const json = await res.json();
     expect(json.item.content).toBe('updated-by-test');
     expect(json.item.updated_by).toBe('test@dalgo.org');
 
     const versionsAfter = await query<{ n: number }>(
-      `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'tools_inventory'`,
+      `SELECT COUNT(*)::int AS n FROM dalgo_prompt_versions WHERE prompt_key = 'identity'`,
     );
     expect(versionsAfter.rows[0].n).toBe(versionsBefore.rows[0].n + 1);
   });
 
   it('returns 400 for invalid body', async () => {
     const res = await onePut(
-      req('http://t/api/admin/prompts/tools_inventory', {
+      req('http://t/api/admin/prompts/identity', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ wrong_field: 'x' }),
       }) as any,
-      { params: Promise.resolve({ key: 'tools_inventory' }) },
+      { params: Promise.resolve({ key: 'identity' }) },
     );
     expect(res.status).toBe(400);
   });
@@ -108,6 +118,18 @@ describe('PUT /api/admin/prompts/[key]', () => {
       { params: Promise.resolve({ key: 'nope' }) },
     );
     expect(res.status).toBe(404);
+  });
+
+  it('rejects PUT on tools_inventory with 403 (auto-generated, read-only)', async () => {
+    const res = await onePut(
+      req('http://t/api/admin/prompts/tools_inventory', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content: 'manual override' }),
+      }) as any,
+      { params: Promise.resolve({ key: 'tools_inventory' }) },
+    );
+    expect(res.status).toBe(403);
   });
 });
 
