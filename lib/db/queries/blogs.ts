@@ -15,6 +15,12 @@ function vectorLiteral(v: number[]): string {
   return `[${v.join(',')}]`;
 }
 
+/** Every blog URL already ingested. Used to skip already-synced posts during refresh. */
+export async function getExistingBlogUrls(): Promise<Set<string>> {
+  const { rows } = await query<{ url: string }>('SELECT url FROM dalgo_blog_articles');
+  return new Set(rows.map((r) => r.url));
+}
+
 export async function vectorSearchBlogs(q: string, topK = 20): Promise<BlogChunkHit[]> {
   const e = await embed(q);
   const { rows } = await query<BlogChunkHit>(

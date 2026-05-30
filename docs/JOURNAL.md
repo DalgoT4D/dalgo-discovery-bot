@@ -6,6 +6,30 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-30 — Incremental blog refresh + admin table filters
+
+**Added**
+- `getExistingBlogUrls()` in `lib/db/queries/blogs.ts` — one query returning the set of already-ingested blog URLs.
+- `components/admin/table-filter.tsx` — reusable `useTableFilter(items, config)` hook returning `{ rows, bar }`. Client-side only (tables are fully loaded, no server pagination yet). Smart search: empty → all; `/pattern/flags/` → regex (case-insensitive by default); otherwise whitespace-separated terms, ALL must substring-match in any order. Plus facet dropdowns (options derived from data) and an inclusive date range. Exported `buildMatcher` covered by `tests/components/admin/table-filter.test.ts` (8 cases).
+- Wired filters into KB (`kb-table.tsx`: category + status facets, last-verified range), Leads (`lead-table.tsx`: intent facet, created range), Blogs (`app/admin/blogs/page.tsx`: category facet, published range), Unanswered (`app/admin/unanswered/page.tsx`: created range).
+
+**Changed**
+- `runIngest` (`lib/blogs/ingest.ts`) now loads existing URLs up front and skips any already-synced post *before* fetch/LLM-context/embed (previously the skip happened last, inside `upsertArticle`, after paying for embeddings).
+- `listPostUrls(category, knownUrls?)` (`lib/blogs/indexer.ts`) stops paginating once a listing page contributes no new-to-DB post — listings are newest-first, so older pages are all synced.
+
+**Why**
+- A refresh with no new blogs was re-fetching, re-contextualizing (LLM), and re-embedding (OpenAI) every article every run. User confirmed blogs are never edited after publishing, so URL-existence is a sufficient sync signal — date/edit detection deliberately dropped for speed.
+- Admin tables had no search; finding a lead by email or a blog by title meant eyeballing. Frontend filters were the ask ("no pagination, just make it findable").
+
+**Eval delta**
+- None (no prompt/retrieval changes). Touched-file tsc + eslint clean; filter matcher tests 8/8; admin routes compile (307 → auth redirect).
+
+**Carried forward / next**
+- Edit-detection for blogs intentionally removed. If Tech4Dev ever edits published posts, re-add a cheap content-hash check *before* the LLM/embed step (behind a `--full` flag).
+- Filters are client-side; revisit if any admin table grows past a few hundred rows and needs server-side search + pagination.
+
+---
+
 ## 2026-05-30 — Guided eval-case editor
 
 **Added**

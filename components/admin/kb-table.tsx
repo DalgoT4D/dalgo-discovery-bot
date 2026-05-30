@@ -2,6 +2,7 @@
 import useSWR from 'swr';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
+import { useTableFilter } from '@/components/admin/table-filter';
 
 type KbRow = {
   id: string;
@@ -16,11 +17,21 @@ const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
 export function KbTable() {
   const { data, error, isLoading } = useSWR<{ items: KbRow[] }>('/api/admin/kb', fetcher);
+  const { rows, bar } = useTableFilter(data?.items, {
+    search: (it) => [...(it.question_variants ?? []), it.notes_for_sales, it.category],
+    searchPlaceholder: 'Search questions, notes… (use /regex/ for patterns)',
+    facets: [
+      { key: 'category', label: 'Category', value: (it) => it.category },
+      { key: 'status', label: 'Status', value: (it) => it.status },
+    ],
+    date: { label: 'Last verified', value: (it) => it.last_verified },
+  });
   if (isLoading) return <p>Loading…</p>;
   if (error) return <p>Error.</p>;
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 space-y-4">
+      {bar}
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left border-b border-border">
@@ -32,7 +43,7 @@ export function KbTable() {
           </tr>
         </thead>
         <tbody>
-          {(data?.items ?? []).map((it) => (
+          {rows.map((it) => (
             <tr key={it.id} className="border-b border-border">
               <td className="p-2">{it.category}</td>
               <td className="p-2">{it.question_variants?.[0]}</td>

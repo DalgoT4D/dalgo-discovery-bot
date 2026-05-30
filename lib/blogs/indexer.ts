@@ -33,7 +33,18 @@ const DELAY_MS = 500;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function listPostUrls(category: string): Promise<PostRef[]> {
+/**
+ * Crawl the listing pages for a category, newest-first, collecting post URLs.
+ *
+ * When `knownUrls` is supplied (the set of already-synced posts), pagination
+ * stops as soon as a page contributes no post that's new to the DB. Listings
+ * are ordered newest-first, so once an entire page is already synced every
+ * older page is too — no point crawling further.
+ */
+export async function listPostUrls(
+  category: string,
+  knownUrls?: ReadonlySet<string>,
+): Promise<PostRef[]> {
   const seen = new Set<string>();
   const out: PostRef[] = [];
   let pageNum = 1;
@@ -47,15 +58,20 @@ export async function listPostUrls(category: string): Promise<PostRef[]> {
     if (!res.ok) break;
     const html = await res.text();
     const refs = extractPostUrls(html, category);
-    let foundNew = false;
+    let foundNewToRun = false;
+    let foundNewToDb = false;
     for (const r of refs) {
       if (!seen.has(r.url)) {
         seen.add(r.url);
         out.push(r);
-        foundNew = true;
+        foundNewToRun = true;
+        if (!knownUrls?.has(r.url)) foundNewToDb = true;
       }
     }
-    if (!foundNew) break;
+    // No new URLs at all → end of listing. Or, when we know what's synced,
+    // a full page of already-synced posts means we've reached old territory.
+    if (!foundNewToRun) break;
+    if (knownUrls && !foundNewToDb) break;
     pageNum++;
     await sleep(DELAY_MS);
   }

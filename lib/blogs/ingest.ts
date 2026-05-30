@@ -1,6 +1,7 @@
 // lib/blogs/ingest.ts
 import { embedBatch } from '@/lib/embeddings';
 import { query } from '@/lib/db/client';
+import { getExistingBlogUrls } from '@/lib/db/queries/blogs';
 import { listPostUrls } from './indexer';
 import { fetchPost } from './fetcher';
 import { parseArticle } from './parser';
@@ -55,10 +56,22 @@ export async function runIngest(opts: IngestOpts): Promise<JobSummary> {
   };
 
   try {
-    const allRefs = (await Promise.all(opts.categories.map(listPostUrls))).flat();
+    // Blogs are never edited after publishing, so a URL already in the DB is
+    // fully synced. Skip those before any fetch/LLM/embed work, and let the
+    // crawler stop paginating once it reaches already-synced posts.
+    const existingUrls = await getExistingBlogUrls();
+    const allRefs = (
+      await Promise.all(opts.categories.map((c) => listPostUrls(c, existingUrls)))
+    ).flat();
 
     for (const ref of allRefs) {
       summary.postsSeen++;
+      if (existingUrls.has(ref.url)) {
+        summary.postsSkipped++;
+        await persistProgress(jobId, summary);
+        if (opts.onProgress) await opts.onProgress(summary);
+        continue;
+      }
       try {
         const raw = await fetchPost(ref.url);
         const parsed = parseArticle(raw);

@@ -3,11 +3,27 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { RefreshJobButton } from '@/components/admin/refresh-job-button';
 import { Card } from '@/components/ui/card';
+import { useTableFilter } from '@/components/admin/table-filter';
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
+type BlogRow = {
+  id: string;
+  title: string;
+  category: string;
+  published_at: string | null;
+  chunk_count: number;
+  last_fetched_at: string;
+};
+
 export default function BlogsPage() {
-  const { data, mutate } = useSWR<{ items: any[] }>('/api/admin/blogs', fetcher);
+  const { data, mutate } = useSWR<{ items: BlogRow[] }>('/api/admin/blogs', fetcher);
+  const { rows, bar } = useTableFilter(data?.items, {
+    search: (a) => [a.title, a.category],
+    searchPlaceholder: 'Search blog titles… (use /regex/ for patterns)',
+    facets: [{ key: 'category', label: 'Category', value: (a) => a.category }],
+    date: { label: 'Published', value: (a) => a.published_at },
+  });
 
   return (
     <div className="space-y-4">
@@ -15,7 +31,8 @@ export default function BlogsPage() {
         <h1 className="text-2xl font-semibold text-foreground">Blogs</h1>
         <RefreshJobButton onDone={() => mutate()} />
       </div>
-      <Card className="p-4">
+      <Card className="p-4 space-y-4">
+        {bar}
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-muted-foreground">
@@ -27,7 +44,7 @@ export default function BlogsPage() {
             </tr>
           </thead>
           <tbody>
-            {(data?.items ?? []).map((a) => (
+            {rows.map((a) => (
               <tr key={a.id} className="border-t border-border">
                 <td className="py-2">
                   <Link className="text-primary hover:underline" href={`/admin/blogs/${a.id}`}>
