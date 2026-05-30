@@ -403,3 +403,53 @@ CREATE TABLE IF NOT EXISTS dalgo_kb_versions (
 
 CREATE INDEX IF NOT EXISTS dalgo_kb_versions_kb_id_idx
   ON dalgo_kb_versions(kb_id, updated_at DESC);
+
+-- Product documentation corpus (migration 007 — kept in sync with this schema file)
+CREATE TABLE IF NOT EXISTS dalgo_doc_pages (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  url             text UNIQUE NOT NULL,
+  title           text NOT NULL,
+  content_md      text NOT NULL,
+  content_hash    text NOT NULL,
+  last_fetched_at timestamptz NOT NULL DEFAULT now(),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS dalgo_doc_chunks (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  page_id      uuid NOT NULL REFERENCES dalgo_doc_pages(id) ON DELETE CASCADE,
+  chunk_index  int  NOT NULL,
+  chunk_text   text NOT NULL,
+  embedding    vector(1536) NOT NULL,
+  tsv          tsvector GENERATED ALWAYS AS (to_tsvector('english', chunk_text)) STORED,
+  UNIQUE (page_id, chunk_index)
+);
+
+CREATE INDEX IF NOT EXISTS doc_chunks_embedding_idx
+  ON dalgo_doc_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+CREATE INDEX IF NOT EXISTS doc_chunks_tsv_idx
+  ON dalgo_doc_chunks USING GIN (tsv);
+
+-- Docs refresh job tracker (migration 009 — kept in sync with this schema file)
+CREATE TABLE IF NOT EXISTS doc_refresh_jobs (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  status        text NOT NULL CHECK (status IN ('queued','running','succeeded','failed')) DEFAULT 'queued',
+  pages_seen    int NOT NULL DEFAULT 0,
+  pages_new     int NOT NULL DEFAULT 0,
+  pages_updated int NOT NULL DEFAULT 0,
+  pages_skipped int NOT NULL DEFAULT 0,
+  started_at    timestamptz,
+  finished_at   timestamptz,
+  error         text,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+-- sessions.is_admin (migration 010 — kept in sync with this schema file).
+-- Binds admin status to the chat session itself, not to whatever NextAuth
+-- cookie the browser is carrying. Critical: without it, a guest chat opened
+-- in a browser where admin is signed in elsewhere would show admin UI.
+ALTER TABLE sessions
+  ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS sessions_is_admin_idx ON sessions (is_admin) WHERE is_admin;

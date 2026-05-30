@@ -41,7 +41,9 @@ npm run seed:kb:reset   # requires OPENAI_API_KEY
 - `npm run test:e2e` — Playwright happy path
 - `npm run eval` — 30-case LLM eval suite (requires ANTHROPIC_API_KEY + OPENAI_API_KEY)
 - `npm run seed:kb` — incrementally embed + insert KB rows
-- `npm run seed:kb:reset` — truncate + re-seed all 131 entries
+- `npm run seed:kb:reset` — truncate + re-seed all entries
+- `npm run seed:blogs` — crawl + index projecttech4dev.org blog posts
+- `npm run seed:docs` — crawl + index the Dalgo product docs site
 - `npm run lint` — ESLint
 
 ## Environment variables
@@ -68,9 +70,30 @@ See:
 
 ## Knowledge base
 
-- 131 entries across 13 categories (data_sources, transforms, dashboards, …)
-- Vector search via pgvector + OpenAI embeddings
-- Admin UI at `/admin/kb` (Google SSO required)
+The bot has **three retrieval stores**, each searched by a separate tool:
+
+| Store | Source | Tool | When the LLM uses it |
+|---|---|---|---|
+| Curated KB (~164 entries, 14 categories incl. `case_studies`) | `lib/db/seed-data/*.ts` — hand-written Q&A | `search_dalgo_kb` | Capability / pricing / fit questions |
+| Blogs (~107 articles) | Scrape of `projecttech4dev.org` | `search_dalgo_blogs` | Customer stories, sector / tool mentions |
+| Product docs (~60 pages) | Scrape of `dalgot4d.github.io/dalgo_docs` | `search_dalgo_docs` | How-to / config / mechanics |
+
+Admin UI: `/admin/kb`, `/admin/blogs`, `/admin/prompts` (Google SSO required).
+
+### Keeping it fresh
+
+**Mechanical (auto-updating):**
+- Blogs: `npm run seed:blogs` — re-crawl + content-hash-based incremental embed. Admin "Refresh" button at `/admin/blogs`.
+- Product docs: `npm run seed:docs` — same pattern. Re-run manually after the Dalgo docs site changes (no cron yet — see `app/api/admin/docs/refresh/route.ts` for the admin POST endpoint). Set `DOCS_SITEMAP_URL` in env to override the source URL.
+
+**Manual (curated KB):**
+- The curated KB is hand-written; new Dalgo features (e.g. KPI/metrics) need new KB entries.
+- Today's flow: edit `lib/db/seed-data/*.ts` → `npm run seed:kb` → review in `/admin/kb`. Or ask Claude to re-scan the upstream Dalgo codebase + docs and draft new entries against the `KbSeed` shape.
+- `wrong_answer_reports` (admin flags bad answers) and `unanswered_questions` (low-confidence queries) are the reactive safety nets. Weekly audit email goes out via `/api/cron/kb-audit` (Mon 09:00 UTC) if `RESEND_API_KEY` + `ADMIN_DIGEST_RECIPIENTS` are set.
+
+**Planned (not yet built):**
+- LLM-assisted KB drift check — compare each curated row against current docs/blogs, flag contradictions.
+- KB-suggestion queue — auto-draft entries when new doc pages appear or when an `unanswered_questions` cluster forms.
 
 ## License
 

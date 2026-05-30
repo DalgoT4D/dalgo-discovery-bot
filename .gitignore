@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 .cache/
 test-results/
+
+# Playwright MCP transient artefacts (page snapshots, console logs, screenshots)
+.playwright-mcp/
+
+# Stray screenshots from verification runs
+evals-editor-*.png
