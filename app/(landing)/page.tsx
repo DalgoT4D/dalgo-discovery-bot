@@ -7,28 +7,26 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/site-header';
 
-const LS_SESSION = 'dalgo_session_id';
 const LS_EMAIL = 'dalgo_email';
 
 type Mode = 'guest' | 'admin';
 
 export default function Landing() {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
   const [mode, setMode] = useState<Mode>('guest');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Pre-fill the email from localStorage for returning users — convenience,
+  // not gating. They still see and confirm the form. The server-side
+  // /api/intake handles email-keyed resume (returns the existing session_id
+  // if one exists for that email).
   useEffect(() => {
-    const saved = typeof window !== 'undefined' ? window.localStorage.getItem(LS_SESSION) : null;
-    if (saved) {
-      router.replace(`/chat/${saved}`);
-      return;
-    }
-    setChecked(true);
-  }, [router]);
+    const savedEmail = typeof window !== 'undefined' ? window.localStorage.getItem(LS_EMAIL) : null;
+    if (savedEmail) setEmail(savedEmail);
+  }, []);
 
   async function startSession(emailValue: string) {
     const res = await fetch('/api/intake', {
@@ -45,7 +43,6 @@ export default function Landing() {
       );
     }
     const { session_id } = (await res.json()) as { session_id: string };
-    window.localStorage.setItem(LS_SESSION, session_id);
     window.localStorage.setItem(LS_EMAIL, emailValue);
     router.push(`/chat/${session_id}`);
   }
@@ -97,7 +94,6 @@ export default function Landing() {
       }
 
       const { session_id } = (await res.json()) as { session_id: string };
-      window.localStorage.setItem(LS_SESSION, session_id);
       window.localStorage.setItem(LS_EMAIL, email);
       router.push(`/chat/${session_id}`);
     } catch {
@@ -116,8 +112,7 @@ export default function Landing() {
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <main className="flex flex-1 items-start justify-center px-4 pt-[14vh]">
-        {checked && (
-          <div className="w-full max-w-md">
+        <div className="w-full max-w-md">
             <div className="flex justify-center">
               <span className="relative inline-flex h-14 w-14 items-center justify-center">
                 <span aria-hidden className="absolute inset-0 rounded-full bg-primary/15" />
@@ -243,7 +238,6 @@ export default function Landing() {
               Used by NGOs worldwide
             </p>
           </div>
-        )}
       </main>
     </div>
   );
