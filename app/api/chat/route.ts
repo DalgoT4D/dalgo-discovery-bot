@@ -25,6 +25,20 @@ export async function GET(req: NextRequest) {
 
   const intro = await getOrCreateIntro(session_id);
 
+  // Hydrate prior conversation so a returning user sees their history,
+  // not the empty-state intro cards. Filter to user/assistant only
+  // (tool messages are internal RAG plumbing, not user-visible) and
+  // pull out the .text payload from the jsonb content column.
+  const history = await listMessages(session_id);
+  const initial_messages = history
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      content: (m.content as { text?: string } | null)?.text ?? '',
+    }))
+    .filter((m) => m.content.length > 0);
+
   // Build a greeting that explicitly surfaces what we learned about the NGO,
   // so the user can see the URL/PDF/intake context wasn't wasted.
   const parts: string[] = ['Hi!'];
@@ -44,6 +58,7 @@ export async function GET(req: NextRequest) {
     ready: true,
     is_admin: Boolean(session.is_admin),
     email: session.email ?? null,
+    initial_messages,
   });
 }
 

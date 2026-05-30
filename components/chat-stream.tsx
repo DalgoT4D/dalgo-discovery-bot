@@ -82,15 +82,23 @@ const PROMPT_CARDS: Array<{ icon: string; title: string; sub: string; prompt: st
 const chipBase =
   'inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-foreground transition-colors hover:bg-muted hover:border-foreground/20';
 
+export interface InitialMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export const ChatStream = forwardRef<
   ChatStreamHandle,
   {
     sessionId: string;
     isAdmin?: boolean;
+    initialMessages?: InitialMessage[];
   }
->(function ChatStream({ sessionId, isAdmin }, ref) {
+>(function ChatStream({ sessionId, isAdmin, initialMessages }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
+    initialMessages,
     experimental_prepareRequestBody: ({ messages }) => {
       const last = messages[messages.length - 1];
       const text =
