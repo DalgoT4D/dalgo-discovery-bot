@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { query, pool } from '@/lib/db/client';
 import { createEvalCase } from '@/lib/db/queries/eval-cases';
 import { __resetForTests as resetCases } from '@/lib/llm/eval/case-source';
-import { startFullRun, runSingleCaseNow } from '@/lib/llm/eval/run-service';
+import { startFullRun, runSingleCaseNow, drainEvalRuns } from '@/lib/llm/eval/run-service';
 import { getEvalRun, getEvalRunResults } from '@/lib/db/queries/eval-runs';
 
 describe('run-service', () => {
@@ -43,7 +43,7 @@ describe('run-service', () => {
       resetCases();
     });
 
-    it('startFullRun returns immediately and completes in background', async () => {
+    it('startFullRun enqueues a pending run that the drainer processes to completion', async () => {
       await createEvalCase({
         case_key: 'svc_fa', bucket: 'guardrails',
         input: 'off-topic', expected: { must_express_uncertainty: true },
@@ -59,17 +59,21 @@ describe('run-service', () => {
       const t0 = Date.now();
       const runId = await startFullRun('svctest');
       const elapsed = Date.now() - t0;
-      expect(elapsed).toBeLessThan(2000); // returns quickly (no blocking)
+      expect(elapsed).toBeLessThan(2000); // enqueue only — returns instantly, no blocking
 
-      // Poll for completion — only 2 cases enabled, so this should finish quickly.
+      // It's queued, not yet executed.
+      expect((await getEvalRun(runId))?.status).toBe('pending');
+
+      // Drain the queue the way the cron does — repeatedly, until the run finishes.
       const deadline = Date.now() + 240_000;
       let run = await getEvalRun(runId);
       while (run && run.status !== 'succeeded' && run.status !== 'failed' && Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2000));
+        await drainEvalRuns();
         run = await getEvalRun(runId);
       }
       expect(run?.status).toBe('succeeded');
       expect(run?.total_cases).toBeGreaterThanOrEqual(2);
+      expect(run?.next_offset).toBe(run?.total_cases);
 
       const results = await getEvalRunResults(runId);
       const ourCases = results.filter((r) => r.case_key.startsWith('svc_'));

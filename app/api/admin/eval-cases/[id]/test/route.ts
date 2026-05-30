@@ -3,6 +3,9 @@ import { auth } from '@/lib/auth';
 import { getEvalCase } from '@/lib/db/queries/eval-cases';
 import { runSingleCaseNow } from '@/lib/llm/eval/run-service';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300; // one case = bot run + multi-run judge; can exceed the default
+
 interface Ctx { params: Promise<{ id: string }>; }
 
 export async function POST(_req: Request, ctx: Ctx) {

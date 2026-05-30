@@ -357,6 +357,12 @@ CREATE TABLE IF NOT EXISTS dalgo_eval_runs (
   total_cases   int NOT NULL DEFAULT 0,
   passed_count  int NOT NULL DEFAULT 0,
   failed_count  int NOT NULL DEFAULT 0,
+  -- Postgres-as-queue columns: a 'full' run is processed in time-bounded chunks
+  -- by the eval-drain cron. next_offset is the resume point (count of cases done);
+  -- locked_at is a worker lease so overlapping drainers don't double-process and a
+  -- crashed chunk is reclaimed once the lease goes stale.
+  next_offset   int NOT NULL DEFAULT 0,
+  locked_at     timestamptz,
   started_at    timestamptz NOT NULL DEFAULT NOW(),
   finished_at   timestamptz,
   error         text

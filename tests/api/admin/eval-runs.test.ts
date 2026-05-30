@@ -7,6 +7,13 @@ vi.mock('@/lib/auth', () => ({
   auth: async () => ({ user: { email: 'admin@example.com', isSystem: false } }),
 }));
 
+// after() requires a Next request scope; calling the handler directly in a test
+// has none. No-op it so POST just enqueues (the drain path is covered by drain.test.ts).
+vi.mock('next/server', async (importActual) => {
+  const actual = await importActual<typeof import('next/server')>();
+  return { ...actual, after: () => {} };
+});
+
 describe('/api/admin/eval-runs', () => {
   beforeEach(async () => {
     await query(`DELETE FROM dalgo_eval_runs WHERE triggered_by LIKE 'apitest%'`);

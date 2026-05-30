@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron/kb-audit", "schedule": "0 9 * * 1" }
+    { "path": "/api/cron/kb-audit", "schedule": "0 9 * * 1" },
+    { "path": "/api/cron/eval-drain", "schedule": "* * * * *" }
   ]
 }

@@ -11,6 +11,8 @@ export interface EvalRunRow {
   total_cases: number;
   passed_count: number;
   failed_count: number;
+  next_offset: number;
+  locked_at: Date | null;
   started_at: Date;
   finished_at: Date | null;
   error: string | null;
@@ -45,6 +47,8 @@ export interface EvalRunUpdate {
   total_cases?: number;
   passed_count?: number;
   failed_count?: number;
+  next_offset?: number;
+  locked_at?: Date | null;
   finished_at?: Date | null;
   error?: string | null;
 }
@@ -57,11 +61,42 @@ export async function updateEvalRun(id: string, patch: EvalRunUpdate): Promise<v
   if (patch.total_cases !== undefined) add('total_cases', patch.total_cases);
   if (patch.passed_count !== undefined) add('passed_count', patch.passed_count);
   if (patch.failed_count !== undefined) add('failed_count', patch.failed_count);
+  if (patch.next_offset !== undefined) add('next_offset', patch.next_offset);
+  if (patch.locked_at !== undefined) add('locked_at', patch.locked_at);
   if (patch.finished_at !== undefined) add('finished_at', patch.finished_at);
   if (patch.error !== undefined) add('error', patch.error);
   if (sets.length === 0) return;
   params.push(id);
   await query(`UPDATE dalgo_eval_runs SET ${sets.join(', ')} WHERE id = $${params.length}`, params);
+}
+
+/**
+ * Atomically claim the next 'full' run that needs work and mark it running.
+ *
+ * Picks a run that is either freshly `pending`, or `running` with a stale lease
+ * (its previous chunk crashed or timed out). `FOR UPDATE SKIP LOCKED` ensures two
+ * overlapping drainers never grab the same row. Returns null when nothing is due.
+ */
+export async function claimNextEvalRun(leaseStaleSeconds = 300): Promise<EvalRunRow | null> {
+  const { rows } = await query<EvalRunRow>(
+    `UPDATE dalgo_eval_runs
+        SET status = 'running', locked_at = now()
+      WHERE id = (
+        SELECT id FROM dalgo_eval_runs
+         WHERE kind = 'full'
+           AND (
+             status = 'pending'
+             OR (status = 'running'
+                 AND (locked_at IS NULL OR locked_at < now() - make_interval(secs => $1)))
+           )
+         ORDER BY started_at
+         FOR UPDATE SKIP LOCKED
+         LIMIT 1
+      )
+      RETURNING *`,
+    [leaseStaleSeconds],
+  );
+  return rows[0] ?? null;
 }
 
 export async function getEvalRun(id: string): Promise<EvalRunRow | null> {

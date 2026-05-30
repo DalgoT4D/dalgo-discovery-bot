@@ -6,6 +6,36 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-30 — Durable background jobs on Vercel (eval-run Postgres queue + after())
+
+**Added**
+- `lib/db/migrations/2026-05-30-eval-run-queue.sql` — adds `next_offset` + `locked_at` to `dalgo_eval_runs` and a one-time cleanup marking pre-existing `pending`/`running` runs `failed` (see Why). DDL also folded into `schema.sql`.
+- `claimNextEvalRun()` in `lib/db/queries/eval-runs.ts` — atomically claims the next due `full` run (`pending`, or `running` with a stale >5min lease) via `FOR UPDATE SKIP LOCKED`; safe under concurrent drainers. Lease = `locked_at`.
+- `drainEvalRuns()` + exported `processRunChunk()` in `lib/llm/eval/run-service.ts` — process one **time-bounded chunk** (budget `EVAL_CHUNK_BUDGET_MS`, default 210s under `maxDuration=300`), checkpointing `next_offset` + counters + lease heartbeat after **every case**, so a killed/timed-out chunk resumes exactly where it stopped. Budget is checked AFTER each case so every claimed chunk makes ≥1 case of progress (a too-small/0 budget can never stall the run). On a voluntary budget-yield the lease is **released** (`locked_at=NULL`) so the next tick continues immediately; only a crash leaves the lease set, and the 5-min stale window handles that without a double-run.
+- `app/api/cron/eval-drain/route.ts` — per-minute cron (added to `vercel.json`) that drains the queue one chunk per tick; `CRON_SECRET`-guarded like `kb-audit`.
+- `vitest.config.ts` → `fileParallelism: false`. These are integration tests against one shared Postgres with global state, so parallel files race (a pre-existing hazard — `eval-runs.test.ts`'s global `enabled`-flag toggling already conflicted with `run-service.test.ts`). Trades full-run speed for correctness.
+- Tests: `tests/lib/llm/eval/drain.test.ts` (fast, LLM mocked — happy path, resume-from-offset, already-complete) and `tests/api/cron/eval-drain.test.ts` (real cron route handler — auth 403s + a full multi-tick drain with `EVAL_CHUNK_BUDGET_MS=0` forcing one case/tick: pending→running→succeeded across 3 ticks, lease released between ticks, exactly 3 result rows). Claim/lease lifecycle also verified directly against the DB. NB: these DB-mutating eval tests share `dalgo_eval_runs` and the global claim, so they must run serially (`--no-file-parallelism`) — same constraint as the existing eval tests' global `enabled`-flag toggling.
+
+**Changed**
+- `startFullRun()` now only **enqueues** a `pending` run (no more `setImmediate(executeFullRun)`); removed `executeFullRun`. `runSingleCaseNow` refactored onto a shared `runAndPersistCase`.
+- `POST /api/admin/eval-runs` → `maxDuration=300` + `after(drainEvalRuns)` so the first chunk starts immediately; the cron continues the rest. Claim locking makes the overlap safe.
+- `POST /api/admin/blogs/refresh` → `maxDuration=300` + `after()` instead of a bare `void` promise (which Vercel kills once the response returns). Incremental refresh fits one invocation; full reseed stays the local `npm run seed:kb:reset` CLI.
+- `POST /api/admin/eval-cases/[id]/test` → `maxDuration=300` (one case = bot + multi-run judge).
+- Updated existing tests to the queue model (`run-service.test.ts` drains explicitly; `eval-runs.test.ts` no-ops `after()`).
+
+**Why**
+- Vercel has no long-lived process — a bare `void promise` / `setImmediate` "background" task is killed the instant the function responds, and a full eval suite (~80 cases × multiple LLM calls, 7–20min) exceeds even the 300s Pro function limit. Chose a Postgres-as-queue + cron drainer (Inngest/QStash/Trigger.dev considered) because these are rare admin-only ops, it adds no vendor, and `dalgo_eval_runs` was already a job-state table. The one-time SQL cleanup is required because the new drainer would otherwise claim & re-run every run the old impl left stuck in `pending`/`running`.
+
+**Eval delta**
+- None (execution mechanism only; case logic unchanged). New drain tests 3/3; updated run-service tests 2/2 (real LLM); eval-runs route tests 2/2; touched-file tsc + eslint clean; all routes compile.
+
+**Carried forward / next**
+- **Prod deploy step:** run `lib/db/migrations/2026-05-30-eval-run-queue.sql` once against prod, set `CRON_SECRET`, and confirm Vercel registers the new per-minute cron (Pro required for sub-daily crons).
+- Offset chunking assumes a stable case set mid-run (`ORDER BY bucket, case_key`); adding/removing cases during a run could shift offsets. Acceptable for rare ops; snapshot the case-key list into the run row if it ever matters.
+- No max-attempt cap on a poison run — a chunk that always throws will retry each tick (surfaced via stale `locked_at` + `error`). Add a cap if it bites.
+
+---
+
 ## 2026-05-30 — Incremental blog refresh + admin table filters
 
 **Added**
