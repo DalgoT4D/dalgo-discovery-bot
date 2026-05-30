@@ -13,6 +13,7 @@
     "seed:kb": "DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
     "seed:kb:reset": "SEED_RESET=true DOTENV_CONFIG_PATH=.env.local tsx lib/db/seed-kb.ts",
     "seed:blogs": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-blogs.ts",
+    "seed:docs": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-docs.ts",
     "seed:patterns": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-patterns.ts",
     "seed:eval-cases": "DOTENV_CONFIG_PATH=.env.local tsx scripts/seed-eval-cases.ts",
     "eval": "DOTENV_CONFIG_PATH=.env.local vitest run tests/llm/eval.test.ts",
