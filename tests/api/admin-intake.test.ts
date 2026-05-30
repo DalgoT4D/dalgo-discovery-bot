@@ -17,10 +17,22 @@ function mockReq(): Request {
   });
 }
 
+// Insert a matching admin row so the new "admin must still exist in DB"
+// guard in /api/admin-intake passes. Hash value is fake — the route reads
+// only the email from auth(), not the password.
+async function seedAdmin(email: string) {
+  await query(
+    `INSERT INTO admins (email, password_hash, is_system) VALUES ($1, $2, false)
+     ON CONFLICT (email) DO NOTHING`,
+    [email, '$2b$10$fake.fake.fake.fake.fake.fake.fake.fake.fake.fake.fak'],
+  );
+}
+
 describe('POST /api/admin-intake', () => {
   beforeAll(async () => {
     await query(`DELETE FROM leads    WHERE email LIKE 'admintest+%@example.org'`);
     await query(`DELETE FROM sessions WHERE email LIKE 'admintest+%@example.org'`);
+    await query(`DELETE FROM admins   WHERE email LIKE 'admintest+%@example.org'`);
   });
 
   beforeEach(() => {
@@ -30,6 +42,7 @@ describe('POST /api/admin-intake', () => {
   afterEach(async () => {
     await query(`DELETE FROM leads    WHERE email LIKE 'admintest+%@example.org'`);
     await query(`DELETE FROM sessions WHERE email LIKE 'admintest+%@example.org'`);
+    await query(`DELETE FROM admins   WHERE email LIKE 'admintest+%@example.org'`);
   });
 
   it('returns 401 when there is no authenticated session', async () => {
@@ -47,8 +60,27 @@ describe('POST /api/admin-intake', () => {
     expect(rows[0]?.count).toBe('0');
   });
 
+  it('returns 401 when the cookie email no longer exists in the admins table (stale JWT)', async () => {
+    // Simulates: admin was signed in, then their admins row was deleted (or
+    // never existed — e.g. JWT forged with a random email). Cookie is still
+    // valid JWT-wise but must not grant access.
+    const orphanEmail = `admintest+orphan+${Date.now()}@example.org`;
+    authMock.mockResolvedValue({ user: { email: orphanEmail } });
+
+    const res = await POST(mockReq() as any);
+    expect(res.status).toBe(401);
+
+    // No session row should have been created for the orphan.
+    const { rows } = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM sessions WHERE email = $1`,
+      [orphanEmail],
+    );
+    expect(rows[0]?.count).toBe('0');
+  });
+
   it('creates a session and lead for the authenticated admin email', async () => {
     const email = `admintest+${Date.now()}@example.org`;
+    await seedAdmin(email);
     authMock.mockResolvedValue({ user: { email } });
 
     const res = await POST(mockReq() as any);
@@ -72,6 +104,7 @@ describe('POST /api/admin-intake', () => {
 
   it('resumes the existing session when the same admin posts twice', async () => {
     const email = `admintest+resume+${Date.now()}@example.org`;
+    await seedAdmin(email);
     authMock.mockResolvedValue({ user: { email } });
 
     const first = await POST(mockReq() as any);
@@ -100,6 +133,7 @@ describe('POST /api/admin-intake', () => {
 
   it('marks the created session row as is_admin = true', async () => {
     const email = `admintest+isadmin+${Date.now()}@example.org`;
+    await seedAdmin(email);
     authMock.mockResolvedValue({ user: { email } });
 
     const res = await POST(mockReq() as any);
@@ -116,6 +150,7 @@ describe('POST /api/admin-intake', () => {
   it('lowercases and trims the email from the auth session', async () => {
     const raw = `  ADMINTEST+CASE+${Date.now()}@Example.Org  `;
     const normalized = raw.toLowerCase().trim();
+    await seedAdmin(normalized);
     authMock.mockResolvedValue({ user: { email: raw } });
 
     const res = await POST(mockReq() as any);

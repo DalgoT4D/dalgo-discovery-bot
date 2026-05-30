@@ -64,6 +64,12 @@ export default function Landing() {
     setError(null);
     setSubmitting(true);
     try {
+      // Clear any stale admin cookie BEFORE signing in. Without this, a
+      // failed signIn (bad creds) leaves any previous valid cookie intact,
+      // and /api/admin-intake would happily authenticate via that old
+      // cookie even though the form's creds were wrong.
+      await signOut({ redirect: false });
+
       // Set the NextAuth cookie via Credentials. We do NOT trust the return value
       // (NextAuth v5-beta's client signIn for Credentials with redirect:false
       // doesn't reliably surface auth failures). The server-side admin-intake

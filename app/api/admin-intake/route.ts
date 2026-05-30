@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { query } from '@/lib/db/client';
+import { findAdminByEmail } from '@/lib/db/queries/admins';
 import { insertLead } from '@/lib/db/queries/leads';
 import { emit } from '@/lib/telemetry';
 
@@ -11,6 +12,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
   const email = rawEmail.toLowerCase().trim();
+
+  // Defense in depth: a signed JWT cookie is not enough — the admin row
+  // must still exist in the DB. Catches the stale-cookie case where the
+  // admin account was deleted (or password rotated) after sign-in.
+  const adminRow = await findAdminByEmail(email);
+  if (!adminRow) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
   // Email-keyed resume: if a session already exists for this admin email, return it
