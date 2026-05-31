@@ -45,6 +45,7 @@ export async function llmJudge(
   runs = 3,
 ): Promise<JudgeResult> {
   const passes: number[] = [];
+  const voteSummaries: string[] = [];
   for (let i = 0; i < runs; i++) {
     const { text } = await generateText({
       model: anthropic(JUDGE_MODEL),
@@ -54,7 +55,11 @@ export async function llmJudge(
     try {
       const match = text.match(/\{[\s\S]*\}/);
       if (!match) {
+        // No JSON found — this is a JUDGE failure (likely truncated/prose
+        // output), NOT necessarily a bad answer. Surface it distinctly so a
+        // 0/N doesn't masquerade as a genuine content failure.
         passes.push(0);
+        voteSummaries.push(`v${i + 1}:PARSE-FAIL(no-json:"${text.slice(0, 40).replace(/\s+/g, ' ')}")`);
         continue;
       }
       const parsed = JSON.parse(match[0]);
@@ -64,13 +69,22 @@ export async function llmJudge(
         parsed.honesty_pass &&  // ← honesty is always required
         parsed.overall_pass;
       passes.push(ok ? 1 : 0);
-    } catch {
+      // Record which sub-criteria the vote saw, so a failure names its cause.
+      const flags = [
+        `struct=${parsed.structure_pass}`,
+        `unc=${parsed.uncertainty_pass}`,
+        `hon=${parsed.honesty_pass}`,
+        `overall=${parsed.overall_pass}`,
+      ].join(' ');
+      voteSummaries.push(`v${i + 1}:${ok ? 'PASS' : 'FAIL'}(${flags})`);
+    } catch (e) {
       passes.push(0);
+      voteSummaries.push(`v${i + 1}:PARSE-FAIL(exception:${String(e).slice(0, 40)})`);
     }
   }
   const total = passes.reduce((a, b) => a + b, 0);
   return {
     pass: total >= Math.ceil(runs / 2),
-    notes: `LLM-judge ${total}/${runs} passes`,
+    notes: `LLM-judge ${total}/${runs} passes | ${voteSummaries.join(' · ')}`,
   };
 }

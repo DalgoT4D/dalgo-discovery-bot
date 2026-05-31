@@ -140,13 +140,30 @@ export interface RunResult {
   latencyMs?: number;         // wall time for the case in milliseconds
 }
 
+// Synthesis-mode override. The eval path pre-injects retrieved context and
+// calls generateText WITHOUT tools, so the production prompt's "always call
+// search_dalgo_kb" rule would make the model role-play tool calls as literal
+// text ("[Calling search_dalgo_kb...]", <tool_result> dumps). This block,
+// appended last, neutralizes that and forces a clean final answer. Editorial
+// discipline (honesty, no invented customers/URLs) still comes from staticSystem().
+const SYNTH_OVERRIDE = `
+## Synthesis mode — IMPORTANT (overrides any tool instructions above)
+You are in answer-synthesis mode and have NO tools available this turn. The
+information you need has ALREADY been retrieved and is included under
+"Retrieved context for this turn" in this prompt. Do NOT call, mention,
+narrate, or simulate any tool or search — never write things like
+"[Calling search_dalgo_kb...]", "Searching...", or <tool_result> blocks.
+Write ONLY the final user-facing answer, grounded strictly in the retrieved
+context. If the context does not cover something, say so honestly instead of
+inventing details.`.trim();
+
 async function synthesizeAnswer(
   c: EvalCase,
   topPassages: { text: string }[],
 ): Promise<string> {
   const augmented = `${await staticSystem()}\n\n## Retrieved context for this turn\n${topPassages
     .map((p) => p.text)
-    .join('\n\n---\n\n')}`;
+    .join('\n\n---\n\n')}\n\n${SYNTH_OVERRIDE}`;
   const { text } = await generateText({
     model: anthropic(SYNTH_MODEL),
     system: augmented,

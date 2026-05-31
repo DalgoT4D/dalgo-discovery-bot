@@ -22,6 +22,10 @@ const wrapPat = (h: PatternHit): Candidate => ({ source: 'pattern_curated', id: 
 const wrapBlog = (h: BlogChunkHit): Candidate => ({ source: 'blog', id: h.chunk_id, chunk: h });
 
 export async function runHybridRetrieval(rewrites: HydeRewrites, topPerCall = 20): Promise<HybridResult> {
+  // NOTE: HyDE is currently bypassed in runPipeline, so all three query slots
+  // hold the same raw user message — these three searches are duplicates. It's
+  // harmless (RRF dedups by id), just slightly redundant DB work. If HyDE stays
+  // off long-term, dedupe identical queries here to cut the redundant calls.
   const queries = [rewrites.problem_query, rewrites.capability_query, rewrites.evidence_query];
 
   const tasks = queries.flatMap((q) => [

@@ -1,14 +1,9 @@
 // lib/llm/eval/report.ts
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { JudgeResult } from './judges/retrieval-judge';
-
-export interface RunResult {
-  id: string;
-  bucket: string;
-  pass: boolean;
-  judgeResults: JudgeResult[];
-}
+// Use the rich RunResult from the runner so we can surface botResponse on
+// failures (the old local subset interface hid it).
+import type { RunResult } from './runner';
 
 export async function writeReport(results: RunResult[]): Promise<string> {
   const ts = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
@@ -37,7 +32,17 @@ export async function writeReport(results: RunResult[]): Promise<string> {
     ``,
     `## Failures`,
     ``,
-    ...results.filter((r) => !r.pass).map((r) => `- **${r.id}** (${r.bucket}): ${r.judgeResults.map((j) => j.notes).join('; ')}`),
+    ...results
+      .filter((r) => !r.pass)
+      .flatMap((r) => [
+        `### ${r.id} (${r.bucket})`,
+        ``,
+        `**Judges:** ${r.judgeResults.map((j) => j.notes).join(' · ')}`,
+        ``,
+        ...(r.botResponse
+          ? ['**Bot response:**', '', '```', r.botResponse.slice(0, 1500), '```', '']
+          : ['_(no bot response captured)_', '']),
+      ]),
   ];
 
   writeFileSync(path, lines.join('\n'), 'utf8');

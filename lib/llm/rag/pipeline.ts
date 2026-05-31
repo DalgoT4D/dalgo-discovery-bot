@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for one-line HyDE revert
 import { rewriteQuery, type HydeRewrites } from './hyde';
 import { runHybridRetrieval, type Candidate } from './hybrid';
 import { fuseRrf } from './rrf';
@@ -49,7 +50,16 @@ function candidateUrl(c: Candidate): string | undefined {
 }
 
 export async function runPipeline(userMsg: string): Promise<PipelineResult> {
-  const hyde = await rewriteQuery(userMsg);
+  // HyDE disabled — it added a Haiku call on the critical path and tripled the
+  // number of searches for marginal benefit at our corpus size. We bypass it by
+  // feeding the raw user message into all three query slots. `rewriteQuery` is
+  // intentionally kept (imported above) so this is a one-line revert.
+  // const hyde = await rewriteQuery(userMsg);
+  const hyde: HydeRewrites = {
+    problem_query: userMsg,
+    capability_query: userMsg,
+    evidence_query: userMsg,
+  };
   const hybrid = await runHybridRetrieval(hyde);
 
   const allLists: Candidate[][] = [
