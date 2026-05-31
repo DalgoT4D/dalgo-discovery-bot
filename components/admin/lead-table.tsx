@@ -28,13 +28,29 @@ export function LeadTable() {
     fetcher,
   );
   const [tab, setTab] = useState<TriageStatus>('new');
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function setStatus(sessionId: string, status: TriageStatus) {
-    await fetch(`/api/admin/leads/${sessionId}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ triage_status: status }),
-    });
+    setActionError(null);
+    let res: Response;
+    try {
+      res = await fetch(`/api/admin/leads/${sessionId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ triage_status: status }),
+      });
+    } catch {
+      setActionError('Network error — could not update the lead. Try again.');
+      return;
+    }
+    if (!res.ok) {
+      setActionError(
+        res.status === 401
+          ? 'Your admin session expired. Reload and sign in again to update leads.'
+          : `Could not update the lead (error ${res.status}).`,
+      );
+      return;
+    }
     mutate();
   }
 
@@ -47,6 +63,11 @@ export function LeadTable() {
 
   return (
     <Card className="space-y-4 p-4">
+      {actionError && (
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {actionError}
+        </p>
+      )}
       <div className="flex gap-2">
         {TABS.map((t) => (
           <button

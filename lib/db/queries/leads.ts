@@ -27,8 +27,8 @@ export async function insertLead(args: {
 }
 
 /**
- * Legacy positional wrapper around insertLead. Kept so existing callers
- * (e.g. `/api/lead`) don't have to change shape.
+ * Legacy positional wrapper around insertLead. Kept for the `request_demo`
+ * tool, which captures a demo lead conversationally.
  */
 export async function createLead(
   sessionId: string,

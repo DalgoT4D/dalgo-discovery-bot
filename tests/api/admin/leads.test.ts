@@ -1,11 +1,14 @@
-import { describe, it, expect, afterAll, vi } from 'vitest';
+import { describe, it, expect, afterAll, beforeEach, vi } from 'vitest';
 import 'dotenv/config';
 import { query, pool } from '@/lib/db/client';
 import { insertLead } from '@/lib/db/queries/leads';
+import { auth } from '@/lib/auth';
 
-vi.mock('@/lib/auth', () => ({
-  auth: async () => ({ user: { email: 'admin@example.com' } }),
-}));
+vi.mock('@/lib/auth', () => ({ auth: vi.fn() }));
+const mockAuth = vi.mocked(auth);
+beforeEach(() => {
+  mockAuth.mockResolvedValue({ user: { email: 'admin@example.com' } } as never);
+});
 
 import { GET } from '@/app/api/admin/leads/route';
 
@@ -38,6 +41,12 @@ describe('GET /api/admin/leads (person-centric)', () => {
     const res = await GET();
     const body = await res.json();
     expect(body.items.find((r: { email: string }) => r.email === email)).toBeUndefined();
+  });
+
+  it('401 when not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce(null as never);
+    const res = await GET();
+    expect(res.status).toBe(401);
   });
 
   afterAll(async () => { await pool().end(); });

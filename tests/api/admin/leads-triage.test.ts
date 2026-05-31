@@ -1,10 +1,13 @@
-import { describe, it, expect, afterAll, vi } from 'vitest';
+import { describe, it, expect, afterAll, beforeEach, vi } from 'vitest';
 import 'dotenv/config';
 import { query, pool } from '@/lib/db/client';
+import { auth } from '@/lib/auth';
 
-vi.mock('@/lib/auth', () => ({
-  auth: async () => ({ user: { email: 'admin@example.com' } }),
-}));
+vi.mock('@/lib/auth', () => ({ auth: vi.fn() }));
+const mockAuth = vi.mocked(auth);
+beforeEach(() => {
+  mockAuth.mockResolvedValue({ user: { email: 'admin@example.com' } } as never);
+});
 
 import { PATCH } from '@/app/api/admin/leads/[sessionId]/route';
 
@@ -43,6 +46,13 @@ describe('PATCH /api/admin/leads/[sessionId]', () => {
     const fake = '00000000-0000-0000-0000-000000000000';
     const res = await PATCH(req({ triage_status: 'rejected' }), { params: Promise.resolve({ sessionId: fake }) });
     expect(res.status).toBe(404);
+  });
+
+  it('401 when not authenticated', async () => {
+    mockAuth.mockResolvedValueOnce(null as never);
+    const id = await newSession();
+    const res = await PATCH(req({ triage_status: 'approved' }), { params: Promise.resolve({ sessionId: id }) });
+    expect(res.status).toBe(401);
   });
 
   afterAll(async () => { await pool().end(); });
