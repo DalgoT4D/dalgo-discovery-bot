@@ -3,7 +3,6 @@ import { forwardRef, useImperativeHandle } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { MessageBubble } from './message-bubble';
 import { Markdown } from './markdown';
-import { SoftCtaBanner } from './soft-cta-banner';
 import { TypingIndicator } from './typing-indicator';
 import { AssistantActions } from './assistant-actions';
 import { cn } from '@/components/ui/cn';
@@ -225,11 +224,7 @@ export const ChatStream = forwardRef<
         )}
       </div>
 
-      {messages.filter((m) => m.role === 'user').length >= 3 && (
-        <div className="px-4">
-          <SoftCtaBanner sessionId={sessionId} />
-        </div>
-      )}
+      {/* follow-up opt-in mounts in Task 9 */}
 
       <form onSubmit={handleSubmit} className="px-4 pb-6 pt-2">
         <div
