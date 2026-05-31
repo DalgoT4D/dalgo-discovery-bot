@@ -110,7 +110,7 @@ export function LeadTable() {
               <td className="p-2">{l.requested_demo ? '✓' : '—'}</td>
               <td className="p-2">
                 <Link
-                  href={`/admin/conversations?session_id=${l.session_id}`}
+                  href={`/admin/conversations/${l.session_id}`}
                   className="text-primary underline"
                 >
                   transcript
