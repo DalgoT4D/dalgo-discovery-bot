@@ -6,9 +6,20 @@ export async function GET() {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   const { rows } = await query(
-    `SELECT l.id, l.created_at, l.email, l.intent, l.session_id, s.ngo_url
-     FROM leads l LEFT JOIN sessions s ON s.id = l.session_id
-     ORDER BY l.created_at DESC`,
+    `SELECT
+        s.id                                   AS session_id,
+        s.created_at,
+        s.email,
+        s.work_domain,
+        s.ngo_url,
+        s.wants_followup,
+        s.triage_status,
+        COALESCE(bool_or(l.intent = 'demo'), false) AS requested_demo
+     FROM sessions s
+     LEFT JOIN leads l ON l.session_id = s.id
+     WHERE s.email IS NOT NULL AND s.is_admin = false
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`,
   );
   return NextResponse.json({ items: rows });
 }
