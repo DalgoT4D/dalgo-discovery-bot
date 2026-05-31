@@ -82,6 +82,59 @@ describe('POST /api/intake', () => {
     const json = await res.json();
     expect(json.error).toBe('invalid_body');
   });
+});
+
+describe('POST /api/intake work_domain', () => {
+  function req(body: unknown) {
+    return new Request('http://localhost/api/intake', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }) as unknown as import('next/server').NextRequest;
+  }
+
+  it('persists work_domain when provided', async () => {
+    const email = `intake-${Date.now()}@x.org`;
+    const res = await POST(req({ email, work_domain: 'leadership' }));
+    expect(res.status).toBe(200);
+    const { session_id } = await res.json();
+    const { rows } = await query(`SELECT work_domain FROM sessions WHERE id = $1`, [session_id]);
+    expect(rows[0].work_domain).toBe('leadership');
+  });
+
+  it('allows omitting work_domain', async () => {
+    const email = `intake-norole-${Date.now()}@x.org`;
+    const res = await POST(req({ email }));
+    expect(res.status).toBe(200);
+    const { session_id } = await res.json();
+    const { rows } = await query(`SELECT work_domain FROM sessions WHERE id = $1`, [session_id]);
+    expect(rows[0].work_domain).toBeNull();
+  });
+
+  it('rejects an invalid work_domain', async () => {
+    const res = await POST(req({ email: `bad-${Date.now()}@x.org`, work_domain: 'wizard' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('backfills work_domain on resume when none was stored, but never overwrites an existing one', async () => {
+    const email = `intake-backfill-${Date.now()}@x.org`;
+
+    // First intake without a role → stored as NULL.
+    const first = await POST(req({ email }));
+    const { session_id } = await first.json();
+
+    // Resume with a role → backfilled onto the same session.
+    const second = await POST(req({ email, work_domain: 'data_tech' }));
+    const secondJson = await second.json();
+    expect(secondJson.session_id).toBe(session_id);
+    let { rows } = await query(`SELECT work_domain FROM sessions WHERE id = $1`, [session_id]);
+    expect(rows[0].work_domain).toBe('data_tech');
+
+    // Resume again with a different role → must NOT overwrite the stored value.
+    await POST(req({ email, work_domain: 'leadership' }));
+    ({ rows } = await query(`SELECT work_domain FROM sessions WHERE id = $1`, [session_id]));
+    expect(rows[0].work_domain).toBe('data_tech');
+  });
 
   afterAll(async () => { await pool().end(); });
 });
