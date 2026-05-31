@@ -799,8 +799,12 @@ Expected: no errors mentioning `soft-cta-banner`, `SoftCtaBanner`, or `api/lead`
 
 - [ ] **Step 5: Commit**
 
+Use explicit paths — do NOT use `git add -A`/`git add .` (the working tree
+carries unrelated uncommitted changes that must not be swept in). The `git rm`
+in Step 2 already staged the two deletions; just add the edited file:
+
 ```bash
-git add -A
+git add components/chat-stream.tsx
 git commit -m "chore: remove redundant soft-CTA banner and /api/lead"
 ```
 
