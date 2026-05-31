@@ -39,17 +39,20 @@ export async function GET(req: NextRequest) {
     }))
     .filter((m) => m.content.length > 0);
 
-  // Build a greeting that explicitly surfaces what we learned about the NGO,
-  // so the user can see the URL/PDF/intake context wasn't wasted.
-  const parts: string[] = ['Hi!'];
+  // Build a greeting that introduces the bot, says what Dalgo is in one line,
+  // sets the plain-language expectation, then surfaces what we learned about
+  // the NGO so the user can see the URL/PDF/intake context wasn't wasted.
+  const parts: string[] = [
+    "Hi! I'm the **Dalgo Fit Bot** — here to help you figure out whether Dalgo is a good fit for your NGO.",
+    'In one line: **Dalgo is a data platform built for NGOs** that brings your data together from different tools, cleans it up, and turns it into dashboards and reports.',
+    "_I'll explain things in plain, non-technical language so Dalgo is easy to understand. Want more technical (or even simpler) detail? Just ask for it in your question._",
+  ];
   if (intro.learned) {
     parts.push(`**Here's what I picked up about you:** ${intro.learned}`);
   } else if (session.ngo_systems) {
     parts.push(`You mentioned you use **${session.ngo_systems}** today.`);
-  } else {
-    parts.push('Ask me anything about whether Dalgo fits your needs.');
   }
-  parts.push('Here are a few questions you might want to start with — or browse the categories on the left, or just type anything.');
+  parts.push('Pick one of the suggestions below to get started — or just type your question.');
   const greeting = parts.join('\n\n');
 
   return NextResponse.json({

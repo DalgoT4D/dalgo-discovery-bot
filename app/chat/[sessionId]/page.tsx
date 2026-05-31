@@ -9,6 +9,7 @@ interface MetaResponse {
   is_admin?: boolean;
   email?: string | null;
   initial_messages?: InitialMessage[];
+  greeting?: string;
 }
 
 export default function ChatPage() {
@@ -75,6 +76,7 @@ export default function ChatPage() {
             isAdmin={isAdmin}
             initialMessages={meta.initial_messages ?? []}
             email={meta?.email}
+            greeting={meta?.greeting}
           />
         )}
       </main>

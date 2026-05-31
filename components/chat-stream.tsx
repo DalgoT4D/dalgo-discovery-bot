@@ -95,8 +95,9 @@ export const ChatStream = forwardRef<
     isAdmin?: boolean;
     initialMessages?: InitialMessage[];
     email?: string | null;
+    greeting?: string;
   }
->(function ChatStream({ sessionId, isAdmin, initialMessages, email }, ref) {
+>(function ChatStream({ sessionId, isAdmin, initialMessages, email, greeting }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     initialMessages,
@@ -149,36 +150,51 @@ export const ChatStream = forwardRef<
     return '';
   };
 
+  const promptCards = (
+    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+      {PROMPT_CARDS.map((card) => (
+        <button
+          key={card.title}
+          type="button"
+          onClick={() => append({ role: 'user', content: card.prompt })}
+          className="rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <span className="text-lg" aria-hidden>
+            {card.icon}
+          </span>
+          <div className="mt-2 text-[15px] font-semibold text-foreground">{card.title}</div>
+          <div className="mt-0.5 text-sm text-muted-foreground">{card.sub}</div>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col">
       <div className="flex-1 overflow-y-auto px-4 pb-2">
         {showIntro ? (
-          <div className="flex flex-col items-center pt-16 sm:pt-24">
-            {/* Brand hero */}
-            <span className="relative inline-flex h-12 w-12 items-center justify-center">
-              <span aria-hidden className="absolute inset-0 rounded-full bg-primary/15" />
-              <span aria-hidden className="relative h-9 w-9 rounded-full bg-primary" />
-            </span>
-            <h2 className="mt-4 text-center text-2xl font-medium tracking-tight text-foreground">
-              How can Dalgo help your NGO today?
-            </h2>
-            <div className="mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-              {PROMPT_CARDS.map((card) => (
-                <button
-                  key={card.title}
-                  type="button"
-                  onClick={() => append({ role: 'user', content: card.prompt })}
-                  className="rounded-lg border border-border bg-card p-4 text-left transition-all hover:border-foreground/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <span className="text-lg" aria-hidden>
-                    {card.icon}
-                  </span>
-                  <div className="mt-2 text-[15px] font-semibold text-foreground">{card.title}</div>
-                  <div className="mt-0.5 text-sm text-muted-foreground">{card.sub}</div>
-                </button>
-              ))}
+          greeting ? (
+            // First-visit greeting rendered as the bot's opening message,
+            // with the starter prompt cards directly beneath it.
+            <div className="flex flex-col pt-6 sm:pt-10">
+              <MessageBubble role="assistant">
+                <Markdown text={greeting} />
+              </MessageBubble>
+              <div className="mt-2">{promptCards}</div>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center pt-16 sm:pt-24">
+              {/* Brand hero (fallback when no greeting is available) */}
+              <span className="relative inline-flex h-12 w-12 items-center justify-center">
+                <span aria-hidden className="absolute inset-0 rounded-full bg-primary/15" />
+                <span aria-hidden className="relative h-9 w-9 rounded-full bg-primary" />
+              </span>
+              <h2 className="mt-4 text-center text-2xl font-medium tracking-tight text-foreground">
+                How can Dalgo help your NGO today?
+              </h2>
+              <div className="mt-8">{promptCards}</div>
+            </div>
+          )
         ) : (
           <>
             {messages.map((m, idx) => {
