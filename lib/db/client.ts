@@ -16,10 +16,10 @@ export function pool(): Pool {
   return _pool;
 }
 
-export async function query<T = any>(sql: string, params: unknown[] = []): Promise<{ rows: T[] }> {
+export async function query<T = any>(sql: string, params: unknown[] = []): Promise<{ rows: T[]; rowCount: number }> {
   const p = pool();
   const result = await p.query(sql, params);
-  return { rows: result.rows as T[] };
+  return { rows: result.rows as T[], rowCount: result.rowCount ?? 0 };
 }
 
 export async function withClient<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
