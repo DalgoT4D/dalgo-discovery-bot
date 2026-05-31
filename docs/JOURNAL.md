@@ -6,6 +6,40 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-31 — Lead follow-up opt-in, role capture, and admin triage
+
+**Added**
+- `sessions.work_domain` / `wants_followup` / `triage_status` columns (migration `lib/db/migrations/2026-05-31-lead-triage-role-followup.sql`, mirrored in `schema.sql`). Per-person model: one email = one session, so role/opt-in/triage are session attributes; `leads` stays an event log.
+- `lib/work-domains.ts` — shared role taxonomy (value→label) copied verbatim from webapp_v2's signup `work_domain` field (`none`, `monitoring_evaluation`, `program_manager`, `data_tech`, `leadership`, `field_worker`) + `workDomainLabel()`.
+- `setWantsFollowup()` / `setTriageStatus()` in `lib/db/queries/sessions.ts`.
+- `PATCH /api/followup` — guest opt-in; sets `wants_followup=true`, emits `lead_captured` (`source_cta: 'followup_optin'`), non-fatal Slack hot-lead ping using the already-stored email.
+- `PATCH /api/admin/leads/[sessionId]` — admin-only triage status update (404 via `rowCount`).
+- `components/followup-optin.tsx` — passive, dismissible card ("Want the Dalgo team to reach out to you at <email>?"), uses the stored email (no re-entry), localStorage-gated per session, floats in the right margin on `lg+`.
+- Optional role `<select>` at the email gate (`app/(landing)/page.tsx`), guest flow only.
+- Tests: 21 new across work-domains, sessions setters, intake role (+resume backfill/no-overwrite), followup, person-centric leads query, triage PATCH.
+
+**Changed**
+- `/api/intake` accepts optional `work_domain` (zod enum), persists on insert, backfills on email-resume only when none stored (won't overwrite).
+- `GET /api/admin/leads` is now **person-centric**: one row per non-admin session with an email (`is_admin=false`), `LEFT JOIN leads` → `requested_demo = bool_or(intent='demo')`. Returns `session_id, created_at, email, work_domain, ngo_url, wants_followup, requested_demo, triage_status`.
+- `components/admin/lead-table.tsx` rewritten: New/Approved/Rejected tabs (client-side filter, per-tab counts), Role/Follow-up?/Demo? columns, per-row Approve/Reject → triage PATCH + SWR `mutate()`. Dropped `useTableFilter` here.
+- `lib/db/client.ts` `query()` now also returns `rowCount` (additive, backward-compatible) so the triage route can 404.
+
+**Removed**
+- `components/soft-cta-banner.tsx` and `/api/lead` — the in-chat banner redundantly re-asked for an email already captured at intake. The conversational `request_demo` tool is unchanged.
+
+**Why**
+- Email is captured at the landing gate, so re-asking in chat was wasteful. Make follow-up a one-click signal, capture role for sales context, and give the leads list an actionable approve/reject workflow with the approved tab as the work queue.
+
+**Eval delta**
+- None (no KB/retrieval change). 21/21 new tests pass; no new tsc/eslint errors (4 tsc + 2 eslint issues are pre-existing and unrelated).
+
+**Carried forward / next**
+- **Prod deploy step:** run `lib/db/migrations/2026-05-31-lead-triage-role-followup.sql` once against prod.
+- Manual visual check still pending: follow-up card placement on desktop/mobile and the gate role dropdown styling.
+- Admin triage has no audit trail (current status only), no notify-on-approve, no bulk actions, no error toast on a failed Approve/Reject PATCH — add if they bite.
+
+---
+
 ## 2026-05-30 — Durable background jobs on Vercel (eval-run Postgres queue + after())
 
 **Added**
