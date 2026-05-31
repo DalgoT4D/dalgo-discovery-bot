@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/site-header';
+import { WORK_DOMAINS } from '@/lib/work-domains';
 
 const LS_EMAIL = 'dalgo_email';
 
@@ -15,6 +16,7 @@ export default function Landing() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('guest');
   const [email, setEmail] = useState('');
+  const [workDomain, setWorkDomain] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,10 @@ export default function Landing() {
     const res = await fetch('/api/intake', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: emailValue }),
+      body: JSON.stringify({
+        email: emailValue,
+        ...(workDomain ? { work_domain: workDomain } : {}),
+      }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -155,6 +160,18 @@ export default function Landing() {
                       aria-label="Email address"
                     />
                   </label>
+                  <select
+                    value={workDomain}
+                    onChange={(e) => setWorkDomain(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                  >
+                    <option value="">Your role (optional)</option>
+                    {WORK_DOMAINS.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
                   <Button type="submit" disabled={submitting || !email} className="w-full">
                     {submitting ? 'Starting…' : 'Start chatting →'}
                   </Button>
