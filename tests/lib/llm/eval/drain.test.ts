@@ -47,6 +47,8 @@ describe('eval drain loop (processRunChunk)', () => {
 
   it('processes all cases, records counts, and marks the run succeeded', async () => {
     const runId = await createEvalRun({ kind: 'full', triggered_by: 'draintest' });
+    // processRunChunk is only ever called on a claimed (running) run.
+    await query(`UPDATE dalgo_eval_runs SET status='running' WHERE id = $1`, [runId]);
     const run = await getEvalRun(runId);
     const { processed, done } = await processRunChunk(run!, now());
 
@@ -70,9 +72,9 @@ describe('eval drain loop (processRunChunk)', () => {
 
   it('resumes from next_offset without re-running earlier cases', async () => {
     const runId = await createEvalRun({ kind: 'full', triggered_by: 'draintest' });
-    // Simulate a prior chunk that already finished case 0 (drain_a, a pass).
+    // Simulate a claimed run mid-flight: case 0 (drain_a) already done.
     await query(
-      `UPDATE dalgo_eval_runs SET next_offset = 1, passed_count = 1, total_cases = 3 WHERE id = $1`,
+      `UPDATE dalgo_eval_runs SET status='running', next_offset = 1, passed_count = 1, total_cases = 3 WHERE id = $1`,
       [runId],
     );
     const run = await getEvalRun(runId);

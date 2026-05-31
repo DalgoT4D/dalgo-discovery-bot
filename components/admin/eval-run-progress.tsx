@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 interface RunStatus {
   id: string;
-  status: 'pending' | 'running' | 'succeeded' | 'failed';
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
   total_cases: number;
   passed_count: number;
   failed_count: number;
@@ -24,7 +24,7 @@ export function EvalRunProgress({ runId, onComplete }: { runId: string; onComple
       const { run: r } = await res.json();
       if (cancelled) return;
       setRun(r);
-      if (r.status === 'succeeded' || r.status === 'failed') {
+      if (r.status === 'succeeded' || r.status === 'failed' || r.status === 'cancelled') {
         onComplete?.();
         return;
       }
@@ -59,7 +59,7 @@ export function EvalRunProgress({ runId, onComplete }: { runId: string; onComple
         </span>
       </div>
       {run.error && <p className="text-destructive mt-2">Error: {run.error}</p>}
-      {(run.status === 'succeeded' || run.status === 'failed') && (
+      {(run.status === 'succeeded' || run.status === 'failed' || run.status === 'cancelled') && (
         <Link
           href={`/admin/evals/runs/${run.id}`}
           className="text-primary underline text-sm mt-2 inline-block"

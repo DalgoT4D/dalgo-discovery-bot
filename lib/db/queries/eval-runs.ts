@@ -1,6 +1,6 @@
 import { query } from '@/lib/db/client';
 
-export type EvalRunStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+export type EvalRunStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 export type EvalRunKind = 'full' | 'single';
 
 export interface EvalRunRow {
@@ -97,6 +97,22 @@ export async function claimNextEvalRun(leaseStaleSeconds = 300): Promise<EvalRun
     [leaseStaleSeconds],
   );
   return rows[0] ?? null;
+}
+
+/**
+ * Cancel a run that hasn't finished yet. Terminal state, so the drainer's claim
+ * (pending / stale-running only) won't pick it up again, and processRunChunk bails
+ * mid-chunk when it sees the status is no longer 'running'. Returns true if a
+ * non-terminal run was actually cancelled (false if it was already done/gone).
+ */
+export async function cancelEvalRun(id: string): Promise<boolean> {
+  const { rowCount } = await query(
+    `UPDATE dalgo_eval_runs
+        SET status = 'cancelled', finished_at = now(), locked_at = NULL
+      WHERE id = $1 AND status IN ('pending', 'running')`,
+    [id],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function getEvalRun(id: string): Promise<EvalRunRow | null> {

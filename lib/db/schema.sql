@@ -351,7 +351,7 @@ CREATE INDEX IF NOT EXISTS dalgo_eval_case_versions_case_id_idx
 
 CREATE TABLE IF NOT EXISTS dalgo_eval_runs (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  status        text NOT NULL CHECK (status IN ('pending', 'running', 'succeeded', 'failed')),
+  status        text NOT NULL CHECK (status IN ('pending', 'running', 'succeeded', 'failed', 'cancelled')),
   kind          text NOT NULL CHECK (kind IN ('full', 'single')),
   triggered_by  text NOT NULL,
   total_cases   int NOT NULL DEFAULT 0,

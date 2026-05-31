@@ -76,6 +76,10 @@ export async function processRunChunk(run: EvalRunRow, startMs: number): Promise
   const budgetMs = chunkBudgetMs();
 
   while (i < cases.length) {
+    // Bail if the run was cancelled (or otherwise left 'running') mid-chunk — stop
+    // burning LLM calls and don't let the loop mark a cancelled run 'succeeded'.
+    const cur = await getEvalRun(run.id);
+    if (cur?.status !== 'running') return { processed, done: false };
     const result = await runAndPersistCase(run.id, cases[i]);
     if (result.pass) passed++; else failed++;
     i++;
