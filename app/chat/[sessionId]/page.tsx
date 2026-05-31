@@ -74,6 +74,7 @@ export default function ChatPage() {
             sessionId={sessionId}
             isAdmin={isAdmin}
             initialMessages={meta.initial_messages ?? []}
+            email={meta?.email}
           />
         )}
       </main>

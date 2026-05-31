@@ -6,6 +6,7 @@ import { Markdown } from './markdown';
 import { TypingIndicator } from './typing-indicator';
 import { AssistantActions } from './assistant-actions';
 import { cn } from '@/components/ui/cn';
+import { FollowupOptin } from './followup-optin';
 
 interface ToolInvocationPart {
   type: 'tool-invocation';
@@ -93,8 +94,9 @@ export const ChatStream = forwardRef<
     sessionId: string;
     isAdmin?: boolean;
     initialMessages?: InitialMessage[];
+    email?: string | null;
   }
->(function ChatStream({ sessionId, isAdmin, initialMessages }, ref) {
+>(function ChatStream({ sessionId, isAdmin, initialMessages, email }, ref) {
   const { messages, input, handleInputChange, handleSubmit, status, append } = useChat({
     api: '/api/chat',
     initialMessages,
@@ -224,7 +226,11 @@ export const ChatStream = forwardRef<
         )}
       </div>
 
-      {/* follow-up opt-in mounts in Task 9 */}
+      {messages.filter((m) => m.role === 'user').length >= 3 && (
+        <div className="px-4 lg:fixed lg:right-6 lg:top-28 lg:z-10 lg:w-72 lg:px-0">
+          <FollowupOptin sessionId={sessionId} email={email} />
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="px-4 pb-6 pt-2">
         <div
