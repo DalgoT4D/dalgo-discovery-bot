@@ -459,3 +459,11 @@ ALTER TABLE sessions
   ADD COLUMN IF NOT EXISTS is_admin boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS sessions_is_admin_idx ON sessions (is_admin) WHERE is_admin;
+
+-- Lead triage, role capture, and follow-up opt-in (kept in sync with
+-- migration 2026-05-31-lead-triage-role-followup.sql).
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS work_domain    text;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS wants_followup boolean NOT NULL DEFAULT false;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS triage_status  text NOT NULL DEFAULT 'new'
+  CHECK (triage_status IN ('new','approved','rejected'));
+CREATE INDEX IF NOT EXISTS sessions_triage_status_idx ON sessions (triage_status);
