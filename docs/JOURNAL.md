@@ -6,6 +6,59 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-05-31 — Chat greeting + plain-language jargon rule
+
+**Added**
+- First-visit greeting now renders as the bot's **opening message**: introduces the "Dalgo Fit Bot", a one-line description of Dalgo, and a note that answers default to plain, non-technical language (more/less depth on request). The `greeting` string from `GET /api/chat` was computed but **never displayed** — wired it through `app/chat/[sessionId]/page.tsx` → `ChatStream` and rendered in the intro state above the starter cards (`MessageBubble` + `Markdown`).
+- Rule 12 in the `rules` system prompt (migration `009_plain_language_rule.sql`): plain language is the default; any unavoidable technical term gets glossed in brackets on first use, e.g. "a warehouse (one central place where all your data is brought together)". Includes the canonical plain framing of Dalgo's flow (pull → one place/warehouse → transform → analyse/visualise/report).
+
+**Changed**
+- Greeting copy rewritten (`app/api/chat/route.ts`); trailing line now points at the suggestion cards below instead of nonexistent "categories on the left".
+- Fixed Rule 11's dangling "See Rule 12 for the boundary discipline" → "See the Dalgo-vs-3rd-party boundary section".
+
+**Why**
+- The greeting was dead data (returned by the API, ignored by the UI), so new visitors saw a generic "How can Dalgo help…" heading. Separately, the bot leaked jargon (warehouse, dbt, orchestration) at non-technical NGO readers.
+
+**Eval delta**
+- Not re-run. Verified in-browser: greeting renders as the opening message; the "What is Dalgo?" answer glossed "warehouse" and "transformation" inline in brackets.
+
+**Carried forward**
+- **Prod deploy:** apply `scripts/migrations/009_plain_language_rule.sql` to the prod DB (prompt cache picks it up within ~60s). Code is in commit `ed0b2de`; this entry is docs-only.
+
+---
+
+## 2026-05-31 — Eval run: resume live status on load + Cancel button
+
+**Added**
+- Cancel a running eval: `cancelEvalRun()` (`UPDATE … SET status='cancelled' WHERE status IN ('pending','running')`, returns whether it actually cancelled), `POST /api/admin/eval-runs/[id]/cancel`, and a Cancel button in `RunEvalsButton` shown while a run is in flight. `cancelled` added to the `dalgo_eval_runs.status` CHECK (migration `2026-05-31-eval-run-cancel.sql`, mirrored in `schema.sql`) + `EvalRunStatus` + `EvalRunProgress` terminal handling.
+- `processRunChunk` re-reads run status before each case and **bails if it's no longer `running`** — so cancel actually stops burning LLM calls mid-chunk and a cancelled run is never overwritten with `succeeded`. (claim already ignores terminal runs, so it won't be re-picked up.)
+- Tests: `tests/api/admin/eval-run-cancel.test.ts` (cancel query no-op-on-terminal, route, and the drainer bail-mid-run). 14 eval-path tests green.
+
+**Changed**
+- `RunEvalsButton` now reattaches the progress poller **on page load** (`GET /api/admin/eval-runs` → first `pending`/`running` run) so live status resumes after a refresh / revisit / second tab — the run was always advancing in the DB; the UI just wasn't watching it.
+- `drain.test.ts` setup marks runs `running` before `processRunChunk` (matches the real contract — it's only called post-claim).
+
+**Why**
+- The status panel was confusing: progress is in the DB and the page polls every 2s, but the poller only started after an in-session click, so a refresh showed an idle button mid-run. And there was no way to stop a run once started.
+
+**Eval delta**
+- None. **Prod deploy:** run `lib/db/migrations/2026-05-31-eval-run-cancel.sql` once.
+
+---
+
+## 2026-05-31 — Fix: eval runs stalled in local dev (no cron to drive chunks)
+
+**Changed**
+- `POST /api/admin/eval-runs` `after()` now loops `drainEvalRuns()` until the queue is empty **when not on Vercel** (`!process.env.VERCEL`); on Vercel it still does one chunk and defers to the per-minute cron.
+
+**Why**
+- The 2026-05-30 queue change moved execution to chunks driven by the Vercel cron — but that cron doesn't exist under `npm run dev`, so a local run did one `after()` chunk and then stalled (status stuck `running`, progress bar frozen). This was a regression from the old `setImmediate(executeFullRun)`, which ran the whole suite in-process. Polling was never broken — there was just nothing advancing the run locally. The loop restores in-process completion for local dev while keeping the durable cron path on Vercel.
+
+**Eval delta**
+- None. New `tests/api/admin/eval-runs-drain.test.ts` (LLM mocked): local path drains to completion; Vercel path (`VERCEL=1`) does exactly one chunk. 2/2 + related eval tests green.
+
+---
+
 ## 2026-05-31 — Lead follow-up opt-in, role capture, and admin triage
 
 **Added**
