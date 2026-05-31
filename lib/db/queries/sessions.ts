@@ -19,7 +19,15 @@ export async function createSession(input: CreateSessionInput) {
 
 export async function updateSession(
   id: string,
-  patch: Partial<{ ngo_summary: string; pdf_url: string; pdf_text: string; ended_at: string }>,
+  patch: Partial<{
+    ngo_summary: string;
+    pdf_url: string;
+    pdf_text: string;
+    ended_at: string;
+    work_domain: string;
+    wants_followup: boolean;
+    triage_status: 'new' | 'approved' | 'rejected';
+  }>,
 ) {
   const keys = Object.keys(patch);
   if (keys.length === 0) return;
@@ -33,4 +41,15 @@ export async function getSession(id: string) {
   const { rows } = await query('SELECT * FROM sessions WHERE id = $1', [id]);
   if (!rows[0]) throw new Error(`session ${id} not found`);
   return rows[0];
+}
+
+export async function setWantsFollowup(id: string): Promise<void> {
+  await query(`UPDATE sessions SET wants_followup = true WHERE id = $1`, [id]);
+}
+
+export async function setTriageStatus(
+  id: string,
+  status: 'new' | 'approved' | 'rejected',
+): Promise<void> {
+  await query(`UPDATE sessions SET triage_status = $2 WHERE id = $1`, [id, status]);
 }
