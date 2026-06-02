@@ -11,7 +11,8 @@ export type EventName =
   | 'report_generated'
   | 'feedback_given'
   | 'blog_search'
-  | 'pattern_match';
+  | 'pattern_match'
+  | 'doc_search';
 
 export async function emit(
   name: EventName,

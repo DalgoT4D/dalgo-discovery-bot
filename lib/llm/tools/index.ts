@@ -5,7 +5,9 @@ import { matchProblemPatternTool } from './match-problem-pattern';
 import { fetchNgoWebsiteTool } from './fetch-ngo-website';
 import { parsePdfTool } from './parse-pdf';
 import { requestDemoTool } from './request-demo';
+import { offerGuestTourTool } from './offer-guest-tour';
 import { suggestRepliesTool } from './suggest-replies';
+import { flagUnproductiveTurnTool } from './flag-unproductive-turn';
 
 export function buildToolset(sessionId: string) {
   return {
@@ -16,6 +18,8 @@ export function buildToolset(sessionId: string) {
     fetch_ngo_website: fetchNgoWebsiteTool(sessionId),
     parse_pdf: parsePdfTool(sessionId),
     request_demo: requestDemoTool(sessionId),
+    offer_guest_tour: offerGuestTourTool(sessionId),
     suggest_replies: suggestRepliesTool(),
+    flag_unproductive_turn: flagUnproductiveTurnTool(),
   };
 }

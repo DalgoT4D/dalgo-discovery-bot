@@ -1,0 +1,23 @@
+# Dalgo Discovery Bot — host crontab for EC2 (replaces Vercel's vercel.json crons,
+# which only run on Vercel). Install on the EC2 host with:  crontab -e
+#
+# Assumes the app is reachable at http://localhost:3000 (next start / Docker
+# port-mapped 3000:3000). The cron routes authenticate with CRON_SECRET, so
+# hitting localhost is safe.
+#
+# Keep the secret out of the crontab: put it in /etc/dalgo-cron.env as
+#   CRON_SECRET=your-secret-here
+# (chmod 600), then each line sources it before curling.
+
+# NOTE: rate-limit-cleanup runs automatically IN-PROCESS via node-cron
+# (instrumentation.ts) when the app container starts — no crontab entry needed.
+# To trigger it externally instead, set DISABLE_CRON=true on the app and
+# uncomment the line below.
+# 0 4 * * * . /etc/dalgo-cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/rate-limit-cleanup >> /var/log/dalgo-cron.log 2>&1
+
+# Weekly Mon 09:00 — KB audit digest email
+0 9 * * 1 . /etc/dalgo-cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/kb-audit >> /var/log/dalgo-cron.log 2>&1
+
+# Every minute — eval queue drain. ONLY needed if you run the eval feature in
+# production; otherwise leave this commented out.
+# * * * * * . /etc/dalgo-cron.env; curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/eval-drain >> /var/log/dalgo-cron.log 2>&1

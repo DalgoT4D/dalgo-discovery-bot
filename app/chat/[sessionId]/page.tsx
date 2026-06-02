@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { ChatStream, type ChatStreamHandle, type InitialMessage } from '@/components/chat-stream';
 import { SiteHeader } from '@/components/site-header';
+import { GuestAccessButton } from '@/components/guest-access-button';
 
 interface MetaResponse {
   is_admin?: boolean;
@@ -55,9 +56,19 @@ export default function ChatPage() {
     <div className="flex h-screen flex-col bg-background">
       <SiteHeader
         variant="chat"
-        sessionLive
         showAdminBadge={isAdmin}
-        adminEmail={adminEmail ?? undefined}
+        right={
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:inline-flex">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" aria-hidden />
+              session live
+            </span>
+            {adminEmail && (
+              <span className="hidden text-sm text-muted-foreground sm:inline">{adminEmail}</span>
+            )}
+            <GuestAccessButton />
+          </div>
+        }
       />
       {needsResignin && (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">

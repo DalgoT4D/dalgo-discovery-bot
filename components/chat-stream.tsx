@@ -7,6 +7,7 @@ import { TypingIndicator } from './typing-indicator';
 import { AssistantActions } from './assistant-actions';
 import { cn } from '@/components/ui/cn';
 import { FollowupOptin } from './followup-optin';
+import { GuestAccessCard } from './guest-access-card';
 
 interface ToolInvocationPart {
   type: 'tool-invocation';
@@ -43,6 +44,13 @@ function extractSuggestedReplies(parts: MessagePart[] | undefined): string[] {
   const last = calls[calls.length - 1] as { replies?: unknown } | undefined;
   if (!last || !Array.isArray(last.replies)) return [];
   return last.replies.filter((s): s is string => typeof s === 'string').slice(0, 4);
+}
+
+function hasGuestTourOffer(parts: MessagePart[] | undefined): boolean {
+  if (!parts) return false;
+  return parts
+    .filter((p): p is ToolInvocationPart => p.type === 'tool-invocation')
+    .some((p) => p.toolInvocation?.toolName === 'offer_guest_tour');
 }
 
 export interface ChatStreamHandle {
@@ -133,6 +141,8 @@ export const ChatStream = forwardRef<
     !isBusy && lastIsAssistant
       ? extractSuggestedReplies(lastMsg.parts as MessagePart[] | undefined)
       : [];
+  const showGuestTour =
+    !isBusy && lastIsAssistant && hasGuestTourOffer(lastMsg.parts as MessagePart[] | undefined);
 
   const lastAssistantText = lastIsAssistant
     ? partsToText(lastMsg.parts as MessagePart[] | undefined)
@@ -223,6 +233,12 @@ export const ChatStream = forwardRef<
               );
             })}
             {showTyping && <TypingIndicator />}
+
+            {showGuestTour && (
+              <div className="mb-4 ml-11 max-w-md">
+                <GuestAccessCard />
+              </div>
+            )}
 
             {suggestedReplies.length > 0 && (
               <div className="mb-4 ml-11 flex flex-wrap gap-2">

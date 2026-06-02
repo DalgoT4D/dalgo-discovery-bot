@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import type { Element } from 'domhandler';
 import TurndownService from 'turndown';
 
 const turndown = new TurndownService({
@@ -41,13 +42,13 @@ export function parseDocPage(html: string, url: string): ParsedDocPage {
   }
 
   if ($body) {
-    ($body as unknown as cheerio.Cheerio<cheerio.Element>)
+    ($body as unknown as cheerio.Cheerio<Element>)
       .find('nav, footer, .theme-doc-toc-desktop, .theme-doc-toc-mobile, .theme-doc-footer, .pagination-nav, .breadcrumbs, button, [aria-label="Copy code to clipboard"]')
       .remove();
   }
 
   const html2 =
-    ($body as unknown as cheerio.Cheerio<cheerio.Element> | null)?.html() ?? '';
+    ($body as unknown as cheerio.Cheerio<Element> | null)?.html() ?? '';
   const contentMd = turndown.turndown(html2).trim();
 
   return { url, title, contentMd };

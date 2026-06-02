@@ -7,6 +7,7 @@ import { listMessages, appendMessage } from '@/lib/db/queries/messages';
 import { query } from '@/lib/db/client';
 import { buildToolset } from '@/lib/llm/tools';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { classifyMessage, getBlockState, recordStrike, clearStrikes } from '@/lib/abuse';
 import { emit } from '@/lib/telemetry';
 import { getOrCreateIntro } from '@/lib/llm/intro-generator';
 import { runPipeline, type RetrievalTrace } from '@/lib/llm/rag/pipeline';
@@ -69,9 +70,27 @@ export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
   const rl = await checkRateLimit(ip);
   if (!rl.ok) {
+    const mins = Math.max(1, Math.ceil(rl.retryAfterSec / 60));
     return NextResponse.json(
-      { error: 'Rate limit exceeded. Please try again later.' },
-      { status: 429 },
+      {
+        error: `You've sent a lot of messages in a short time. Please try again in about ${mins} minute${mins === 1 ? '' : 's'}.`,
+        retry_after_sec: rl.retryAfterSec,
+      },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
+  }
+
+  // Soft abuse block: if this IP burned through the strike threshold, reject
+  // without touching the LLM until the block expires.
+  const block = await getBlockState(ip);
+  if (block.blocked) {
+    const mins = Math.max(1, Math.ceil(block.retryAfterSec / 60));
+    return NextResponse.json(
+      {
+        error: `Let's keep this focused on Dalgo. This conversation is paused for about ${mins} minute${mins === 1 ? '' : 's'} — or reach the team directly at hello@dalgo.org.`,
+        retry_after_sec: block.retryAfterSec,
+      },
+      { status: 429, headers: { 'Retry-After': String(block.retryAfterSec) } },
     );
   }
 
@@ -82,6 +101,38 @@ export async function POST(req: NextRequest) {
 
   const session = await getSession(session_id);
   const history = await listMessages(session_id);
+
+  // Cheap pre-filter before any LLM call: obvious junk earns a strike (and may
+  // trip the block); an over-long message is rejected without a strike.
+  const lastUserMessage = [...history].reverse().find((m) => m.role === 'user');
+  const lastUserText =
+    typeof lastUserMessage?.content === 'string'
+      ? lastUserMessage.content
+      : ((lastUserMessage?.content as { text?: string } | null)?.text ?? null);
+  const verdict = classifyMessage(message ?? '', lastUserText);
+  if (verdict === 'too_long') {
+    return NextResponse.json(
+      { error: 'That message is quite long. Could you shorten it to the key question?' },
+      { status: 413 },
+    );
+  }
+  if (verdict === 'junk') {
+    const struck = await recordStrike(ip);
+    if (struck.blocked) {
+      const mins = Math.max(1, Math.ceil(struck.retryAfterSec / 60));
+      return NextResponse.json(
+        {
+          error: `Let's keep this focused on Dalgo. This conversation is paused for about ${mins} minute${mins === 1 ? '' : 's'} — or reach the team directly at hello@dalgo.org.`,
+          retry_after_sec: struck.retryAfterSec,
+        },
+        { status: 429, headers: { 'Retry-After': String(struck.retryAfterSec) } },
+      );
+    }
+    return NextResponse.json(
+      { error: "I didn't catch a question there — ask me anything about Dalgo or your NGO's data needs." },
+      { status: 422 },
+    );
+  }
 
   await appendMessage(session_id, 'user', { text: message });
   await emit('message_sent', { role: 'user', text_len: message.length }, session_id);
@@ -144,7 +195,19 @@ export async function POST(req: NextRequest) {
     messages: [...systemMessages, ...messages],
     tools: buildToolset(session_id),
     maxSteps: 6,
-    onFinish: async ({ text, usage }) => {
+    onFinish: async ({ text, usage, steps }) => {
+      // Did the model flag this turn as unproductive? If so, add a strike
+      // (which may block the IP on the next request); otherwise the turn was
+      // genuine, so clear any accumulated consecutive strikes.
+      const flagged = steps?.some((s) =>
+        s.toolCalls?.some((tc) => tc.toolName === 'flag_unproductive_turn'),
+      );
+      if (flagged) {
+        await recordStrike(ip);
+      } else {
+        await clearStrikes(ip);
+      }
+
       const assistantRow = await appendMessage(
         session_id,
         'assistant',

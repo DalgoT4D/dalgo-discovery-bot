@@ -1,0 +1,23 @@
+# Remote deploy (e.g. EC2) against an external RDS Postgres — no DB container.
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Provide secrets/config via a .env.production file or the host environment.
+# DATABASE_URL must point at your RDS endpoint and SSL must be enabled:
+#   DATABASE_URL=postgres://USER:PASSWORD@your-instance.rds.amazonaws.com:5432/dalgo_discovery
+#   DATABASE_SSL=true
+#   ANTHROPIC_API_KEY=...  OPENAI_API_KEY=...  CRON_SECRET=...  (etc — see .env.example)
+services:
+  app:
+    build:
+      context: .
+    container_name: dalgo-discovery-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      NODE_ENV: production
+      # In-process node-cron (instrumentation.ts) handles rate-limit cleanup;
+      # set DISABLE_CRON=true if you instead trigger it via EventBridge.

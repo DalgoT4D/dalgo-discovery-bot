@@ -86,7 +86,12 @@ CREATE TABLE IF NOT EXISTS unanswered_questions (
 CREATE TABLE IF NOT EXISTS rate_limit_buckets (
   ip          inet PRIMARY KEY,
   window_start timestamptz NOT NULL,
-  count       int NOT NULL DEFAULT 0
+  count       int NOT NULL DEFAULT 0,
+  -- Abuse tracking: consecutive low-value (gibberish/off-topic/jailbreak)
+  -- turns, and a soft IP block once the strike threshold is hit. Reset to 0
+  -- on any genuine on-topic message. See lib/abuse.ts.
+  strikes      int NOT NULL DEFAULT 0,
+  blocked_until timestamptz
 );
 
 -- KB vector match RPC (used by lib/db/queries/kb.ts in Task 7)

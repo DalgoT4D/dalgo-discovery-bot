@@ -287,3 +287,116 @@ this is a timeline you'll scan a year from now, not a design doc.
 - Spec: `Dalgo/docs/superpowers/specs/2026-05-25-rag-upgrade-and-blog-ingestion-design.md`
 - Plans: `Dalgo/docs/superpowers/plans/2026-05-25-rag-phase-{1,2,3}-*.md`
 - Branch: `feat/blog-ingestion`
+
+---
+
+## 2026-06-02 — Atomic per-IP rate limiting
+
+**Added**
+- `lib/rate-limit.ts` rewritten to a single atomic upsert (check-and-increment in one SQL statement) over a fixed window. Returns `retryAfterSec`.
+- Defaults: **40 messages / 30-minute window per IP**, tunable via `RATE_LIMIT_MAX_MSG` + `RATE_LIMIT_WINDOW_MINUTES`.
+- `POST /api/chat` 429 now sends a plain-language "try again in ~N minutes" message + `Retry-After` header (`route.ts`).
+
+**Removed**
+- Old read-then-write rate limiter and the `RATE_LIMIT_MAX_MSG_PER_HOUR` env var (replaced).
+
+**Why**
+- The previous limiter read the count and incremented in two separate queries — concurrent requests from one IP could both read a stale count and slip past the cap. A scripted abuser could drain the LLM token budget. The single-statement upsert closes the race.
+- Window/limit chosen to be generous for a genuine NGO eval session (~10–30 msgs) while capping a script at ~80/hr per IP.
+
+**Carried forward / next**
+- Connection-pool sizing for serverless deploy: `lib/db/client.ts` uses `max: 10` per instance — lower it and/or add a pooler (PgBouncer/Supabase/Neon) before production to avoid `too many connections`. Not a local-dev issue.
+- Per-IP only — no protection against a distributed (many-IP) attacker. Add a global daily token/message circuit-breaker if abuse appears.
+- Chat is already concurrent (one streaming POST per turn via `useChat` → `toDataStreamResponse()`); no app-logic change was needed for concurrency.
+
+---
+
+## 2026-06-02 — AWS/RDS pooling + abuse protection for public launch
+
+**Added**
+- `lib/db/client.ts`: env-driven pool (`DB_POOL_MAX`), `connectionTimeoutMillis` (fail fast under saturation), and RDS SSL (`DATABASE_SSL` / `DATABASE_SSL_STRICT`). Targets a long-running Docker container on AWS + RDS Postgres (total conns ≈ replicas × DB_POOL_MAX).
+- `lib/abuse.ts`: per-IP abuse layer on `rate_limit_buckets` (new `strikes` + `blocked_until` columns).
+  - `classifyMessage()` — free heuristic pre-filter (empty / symbol-only / exact-repeat → strike; over-`MAX_MESSAGE_CHARS` → reject, no strike). **Unicode-aware** (`\p{L}\p{N}`) so Hindi/non-Latin messages are never mistaken for gibberish.
+  - Atomic `recordStrike()` / `getBlockState()` / `clearStrikes()`. Soft-block an IP for `ABUSE_BLOCK_MINUTES` (30) after `ABUSE_STRIKE_THRESHOLD` (5) consecutive low-value turns.
+- `flag_unproductive_turn` tool + system-prompt rule (`ABUSE_RULE`, kept in code so it survives a DB reset). The main Sonnet call flags semantic junk/jailbreaks at ~zero extra cost; `onFinish` reads `steps[].toolCalls` → strike (junk) or clear (genuine).
+- `app/api/chat/route.ts`: block-check + classify before any LLM call; blocked/junk return 429/422/413 with plain-language guidance + `Retry-After`. Once blocked, **no LLM call happens** — that's what protects the token budget.
+- `tests/lib/abuse.test.ts` — 8 tests (heuristics incl. Hindi guard + strike→block→reset lifecycle). All pass.
+
+**Why**
+- Going public. Per-IP rate limit (40/30min) does nothing against distributed (many-IP) abuse, and nothing against one IP spamming junk to burn LLM tokens. The strike/block stops sustained junk cheaply; the heuristic + LLM-flag split avoids spending tokens to detect token-wasting.
+- Confirmed API keys are server-side only (no `NEXT_PUBLIC_` secrets) — key *exposure* is not a risk; *misuse* is what these layers address.
+
+**Carried forward / next**
+- **Distributed attacks still need infra:** AWS WAF rate-based rules on the ALB/CloudFront (volumetric), optional Cloudflare Turnstile on session create, and an app-level **global daily message/token circuit-breaker** (not yet built) as the real backstop for many-IP abuse.
+- Blocked/junk responses currently surface via `useChat` error state — optional frontend polish to render them as a friendly inline assistant message + countdown.
+
+---
+
+## 2026-06-02 — Global daily circuit breaker
+
+**Added**
+- `global_usage` table (one row per UTC day: `messages`, `tokens`).
+- `lib/global-limit.ts`: `checkGlobalLimit()` (read-only, gates before the LLM call) + `recordGlobalUsage(tokens)` (atomic upsert in `onFinish`, using `usage.totalTokens`). Caps via `GLOBAL_DAILY_MAX_MESSAGES` (3000) / `GLOBAL_DAILY_MAX_TOKENS` (10M); set to 0 to disable a dimension. Auto-resets at UTC midnight.
+- `app/api/chat/route.ts`: returns 503 + `Retry-After: 3600` to everyone once a cap is hit.
+- `tests/lib/global-limit.test.ts` — 3 tests (atomic accumulation + under-cap ok). Pass.
+
+**Why**
+- The backstop for distributed (many-IP) abuse that per-IP rate limiting + strikes can't catch — a hard ceiling on daily token spend regardless of how the load is spread. Tokens (not just message count) is the real cost guard.
+
+**Carried forward / next**
+- Still infra-level: AWS WAF rate-based rule on ALB/CloudFront for volumetric floods (sheds load before it reaches the container — cheaper than absorbing it).
+- Old `global_usage` rows accumulate (tiny); add a cleanup later if desired.
+- Consider surfacing today's usage in the admin dashboard so the team sees how close to the cap they are.
+
+---
+
+## 2026-06-03 — Reverted global circuit breaker
+
+**Removed**
+- `lib/global-limit.ts`, `tests/lib/global-limit.test.ts`, the `global_usage` table (schema + live DB), the route gate/increment, and the `GLOBAL_DAILY_*` env vars.
+
+**Why**
+- Decision to keep abuse protection simple: per-IP rate limit (40/30min) + per-IP nonsense strike/block only. Distributed-abuse defense, if needed later, will be handled at the infra layer (AWS WAF) rather than in-app.
+
+**Carried forward**
+- Per-IP rate limit + strike/block remain (from the two prior entries today). AWS WAF rate-based rule still the recommended infra-level next step before public launch.
+
+---
+
+## 2026-06-03 — rate_limit_buckets cleanup cron
+
+**Added**
+- `app/api/cron/rate-limit-cleanup/route.ts` — GET guarded by `Authorization: Bearer ${CRON_SECRET}` (same pattern as kb-audit). Deletes rows whose rate-limit window lapsed >1 day ago AND that aren't actively blocked; returns `{ ok, deleted }`.
+- `vercel.json` cron: daily at 04:00 (`0 4 * * *`).
+
+**Why**
+- `rate_limit_buckets` grows one row per unique visitor IP indefinitely. Stale rows are safe to drop — the next request re-creates a fresh row. Active blocks are preserved until they expire.
+
+**Carried forward**
+- vercel.json crons only fire on Vercel. On the planned AWS deploy, schedule this with EventBridge (or any cron) hitting the endpoint with the `CRON_SECRET` bearer header.
+
+---
+
+## 2026-06-03 — Dockerize + in-process cron (node-cron)
+
+**Added**
+- `Dockerfile` — multi-stage (deps → build → runner) producing a Next.js **standalone** image (`output: 'standalone'` + `outputFileTracingRoot` pinned in `next.config.ts`), non-root, port 3000.
+- `.dockerignore`.
+- `docker-compose.yml` — local full stack: pgvector **+ app**, one `docker compose up --build` serves http://localhost:3000. App's `DATABASE_URL` points at the `postgres` service; `schema.sql` auto-applied on first DB init.
+- `docker-compose.prod.yml` — remote/EC2: **app only**, against external **RDS** (`DATABASE_URL` + `DATABASE_SSL=true` via `.env.production`/host env). No DB container.
+- `instrumentation.ts` — Next instrumentation hook starts **node-cron** in-process (nodejs runtime only; skip via `DISABLE_CRON=true`). Runs rate-limit cleanup daily 04:00 UTC. `lib/maintenance.ts` (`cleanupRateLimitBuckets`) shared by the cron + the HTTP route.
+- Dependency: `node-cron@4`.
+
+**Changed**
+- `rate-limit-cleanup` removed from `vercel.json` (now in-process); `deploy/crontab.example` notes it's automatic.
+- Pre-existing type errors fixed to unblock `next build`: `lib/docs/parser.ts` (cheerio `Element` → `domhandler`), `lib/telemetry.ts` (added `doc_search` to `EventName`).
+
+**Why**
+- Deploying on EC2 (Docker) + RDS, not Vercel. In-process node-cron means the container is self-contained — no host crontab/EventBridge needed for routine cleanup. `next build` had never been run green (latent type errors); Docker forces a real build, so they're fixed.
+
+**Verified**
+- `npm run build` green; `.next/standalone/server.js` + traced `node-cron` + compiled `instrumentation.js` present. Lib unit tests pass.
+
+**Carried forward**
+- schema.sql drift (intro_text, case_studies) still applies to fresh DB init — documented in CLAUDE.md.
+- AWS WAF rate-based rule still the infra-level next step.

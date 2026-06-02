@@ -1,3 +1,8 @@
+# Local full stack: Postgres (pgvector) + the app, both in Docker.
+#   docker compose up --build      → starts DB and app on http://localhost:3000
+#   docker compose up -d postgres  → just the DB (e.g. when running `npm run dev`)
+#
+# For a remote deploy against RDS (no DB container) use docker-compose.prod.yml.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -11,11 +16,36 @@ services:
       - "5436:5432"
     volumes:
       - dalgo-discovery-pg:/var/lib/postgresql/data
+      # Applied only on first init of an empty volume. Core schema; note the
+      # manual ALTERs documented in CLAUDE.md (intro_text, case_studies) are
+      # not in schema.sql.
+      - ./lib/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dalgo -d dalgo_discovery"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  app:
+    build:
+      context: .
+    container_name: dalgo-discovery-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    # Pull API keys etc. from .env.local; absent file is fine (keys can come
+    # from the shell environment instead).
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      # Inside the compose network the DB is the 'postgres' service on 5432.
+      # This overrides the localhost:5436 DATABASE_URL in .env.local.
+      DATABASE_URL: postgres://dalgo:dalgo_dev@postgres:5432/dalgo_discovery
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   dalgo-discovery-pg:
