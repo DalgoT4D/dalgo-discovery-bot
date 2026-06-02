@@ -400,3 +400,21 @@ this is a timeline you'll scan a year from now, not a design doc.
 **Carried forward**
 - schema.sql drift (intro_text, case_studies) still applies to fresh DB init — documented in CLAUDE.md.
 - AWS WAF rate-based rule still the infra-level next step.
+
+---
+
+## 2026-06-03 — Remove dead PDF-upload path
+
+**Removed**
+- `lib/pdf.ts` (pdfjs-dist text extraction), `app/api/upload/route.ts`, `lib/llm/tools/parse-pdf.ts`, `tests/lib/pdf.test.ts`; `parse_pdf` tool deregistered.
+- Deps: `pdfjs-dist`, `pdf-parse` (never imported), `@types/pdf-parse`.
+
+**Why**
+- No UI ever uploaded a file, so `/api/upload` was unreachable and `parse_pdf` always returned "No PDF was uploaded". `pdfjs-dist` was also the source of the runtime `@napi-rs/canvas` warning in the Docker container. Dropping the dead path removes the warning and shrinks the image.
+- Report generation (`@react-pdf/renderer`, `/api/report`, `app/report/[sessionId]`) is a SEPARATE, still-used feature and was left intact — it does not use canvas.
+
+**Verified**
+- `npm run build` green; rebuilt Docker image boots with no canvas warning; cron still registers. tools-inventory + system-prompt tests pass.
+
+**Carried forward**
+- `sessions.pdf_url` / `pdf_text` columns remain (harmless, now always null). DB prompt text in `dalgo_prompts` may still mention uploading a PDF — trim there if the bot offers it in conversation.

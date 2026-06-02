@@ -3,7 +3,6 @@ import { searchDalgoBlogsTool } from './search-dalgo-blogs';
 import { searchDalgoDocsTool } from './search-dalgo-docs';
 import { matchProblemPatternTool } from './match-problem-pattern';
 import { fetchNgoWebsiteTool } from './fetch-ngo-website';
-import { parsePdfTool } from './parse-pdf';
 import { requestDemoTool } from './request-demo';
 import { offerGuestTourTool } from './offer-guest-tour';
 import { suggestRepliesTool } from './suggest-replies';
@@ -16,7 +15,6 @@ export function buildToolset(sessionId: string) {
     search_dalgo_docs: searchDalgoDocsTool(sessionId),
     match_problem_pattern: matchProblemPatternTool(sessionId),
     fetch_ngo_website: fetchNgoWebsiteTool(sessionId),
-    parse_pdf: parsePdfTool(sessionId),
     request_demo: requestDemoTool(sessionId),
     offer_guest_tour: offerGuestTourTool(sessionId),
     suggest_replies: suggestRepliesTool(),
