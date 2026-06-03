@@ -280,6 +280,19 @@ CREATE TABLE IF NOT EXISTS wrong_answer_reports (
 CREATE INDEX IF NOT EXISTS wrong_answer_reports_msg_idx
   ON wrong_answer_reports (message_id);
 
+-- Upgrade path for existing installs (wrong-answer review lifecycle, 2026-06-03).
+-- CREATE TABLE IF NOT EXISTS above is skipped on pre-existing tables, so add the
+-- lifecycle columns/constraints idempotently here.
+ALTER TABLE wrong_answer_reports ADD COLUMN IF NOT EXISTS suggested_answer text;
+ALTER TABLE wrong_answer_reports ADD COLUMN IF NOT EXISTS fix_kind text;
+ALTER TABLE wrong_answer_reports ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+ALTER TABLE wrong_answer_reports ADD COLUMN IF NOT EXISTS resolved_by text;
+ALTER TABLE wrong_answer_reports ADD COLUMN IF NOT EXISTS resolved_at timestamptz;
+ALTER TABLE wrong_answer_reports DROP CONSTRAINT IF EXISTS wrong_answer_reports_status_check;
+ALTER TABLE wrong_answer_reports ADD CONSTRAINT wrong_answer_reports_status_check CHECK (status IN ('pending','resolved','dismissed'));
+ALTER TABLE wrong_answer_reports DROP CONSTRAINT IF EXISTS wrong_answer_reports_fix_kind_check;
+ALTER TABLE wrong_answer_reports ADD CONSTRAINT wrong_answer_reports_fix_kind_check CHECK (fix_kind IN ('edited','created'));
+
 -- ============================================================
 -- Phase 5: Email-gate modal (added 2026-05-27)
 -- ============================================================

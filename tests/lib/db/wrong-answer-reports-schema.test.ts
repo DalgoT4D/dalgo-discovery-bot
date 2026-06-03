@@ -2,14 +2,13 @@ import { describe, it, expect, afterAll } from 'vitest';
 import 'dotenv/config';
 import { pool, query } from '@/lib/db/client';
 
-const SID = '00000000-0000-0000-0000-0000000000b1';
-
 describe('wrong_answer_reports lifecycle columns', () => {
   it('accepts suggested_answer + status + resolution columns and defaults status=pending', async () => {
-    await query(`INSERT INTO sessions (id) VALUES ($1) ON CONFLICT DO NOTHING`, [SID]);
+    const s = await query<{ id: string }>(`INSERT INTO sessions DEFAULT VALUES RETURNING id`);
+    const sid = s.rows[0].id;
     const m = await query<{ id: string }>(
       `INSERT INTO messages (session_id, role, content) VALUES ($1,'assistant','{"text":"x"}'::jsonb) RETURNING id`,
-      [SID],
+      [sid],
     );
     const r = await query<{ status: string }>(
       `INSERT INTO wrong_answer_reports (message_id, reason, suggested_answer, reported_by)
@@ -27,7 +26,7 @@ describe('wrong_answer_reports lifecycle columns', () => {
     expect(u.rows[0].status).toBe('resolved');
     expect(u.rows[0].fix_kind).toBe('created');
 
-    await query(`DELETE FROM sessions WHERE id=$1`, [SID]); // cascades report+message
+    await query(`DELETE FROM sessions WHERE id=$1`, [sid]); // cascades messages + reports
   });
 
   it('allows wrong_answer_fix as a KB source value', async () => {
