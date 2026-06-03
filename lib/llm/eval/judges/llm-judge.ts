@@ -6,7 +6,15 @@ import type { JudgeResult } from './retrieval-judge';
 
 const JUDGE_MODEL = 'claude-haiku-4-5-20251001';
 
-const RUBRIC = (c: EvalCase, response: string, retrievedPassages: string[]) => `
+const RUBRIC = (c: EvalCase, response: string, retrievedPassages: string[]) => {
+  const conveyLine = c.expected.answer_must_convey
+    ? `\n- convey_pass: passes if the response clearly conveys this point: "${c.expected.answer_must_convey}". Fails if it contradicts or omits it.`
+    : '';
+  const conveyJson = c.expected.answer_must_convey
+    ? '\n  "convey_pass": boolean,'
+    : '';
+
+  return `
 You are evaluating a Dalgo Discovery Bot response to an NGO question.
 
 USER MESSAGE:
@@ -29,16 +37,17 @@ Score this response across the expected criteria. Return ONLY JSON:
 {
   "structure_pass": boolean,
   "uncertainty_pass": boolean,
-  "honesty_pass": boolean,
+  "honesty_pass": boolean,${conveyJson}
   "overall_pass": boolean
 }
 
 Definitions:
 - structure_pass: the response contains the expected sections in spirit. If expected.structure includes 'evidence', this passes when EITHER the response cites a customer that appears in the RETRIEVED CONTEXT OR explicitly acknowledges no specific case study is available. Both are valid behaviors. Minor truncation of a URL or sentence (e.g., a final token cut off) is acceptable — judge generously on structure.
 - uncertainty_pass: only relevant if expected.must_express_uncertainty is true. Passes if the response honestly acknowledges scope limits — EITHER by saying "I'm not sure" / "let me flag this for the Dalgo team" / "I don't have specific info on that" OR by confidently and accurately stating Dalgo isn't designed for that use case (e.g., "Dalgo isn't a CRM" for a CRM-replacement question, "Dalgo isn't a payroll system" for a payroll question). Both kinds of answer are honest. FAILS only if the response gives false confidence about something Dalgo doesn't do (e.g., "Yes, Dalgo can replace Salesforce!" for a CRM question — that's hallucinating capability).
-- honesty_pass: PASSES if every customer name, capability, or URL in the response can be found in or reasonably inferred from the RETRIEVED CONTEXT. FAILS only if the response invents something NOT supported by the retrieved context — e.g., a customer/URL/feature that doesn't appear there. Citing a customer that IS in the context is the CORRECT behavior, not a violation.
+- honesty_pass: PASSES if every customer name, capability, or URL in the response can be found in or reasonably inferred from the RETRIEVED CONTEXT. FAILS only if the response invents something NOT supported by the retrieved context — e.g., a customer/URL/feature that doesn't appear there. Citing a customer that IS in the context is the CORRECT behavior, not a violation.${conveyLine}
 - overall_pass: PASSES if you'd ship this response to a real NGO leader. A response that honestly says "I don't have a specific case study but here's how Dalgo would approach this..." passes. A response that fabricates customer details beyond the retrieved context fails.
 `.trim();
+};
 
 export async function llmJudge(
   input: { case: EvalCase; response: string; retrievedPassages?: string[] },
@@ -66,6 +75,7 @@ export async function llmJudge(
       const ok =
         (input.case.expected.structure ? parsed.structure_pass : true) &&
         (input.case.expected.must_express_uncertainty ? parsed.uncertainty_pass : true) &&
+        (input.case.expected.answer_must_convey ? parsed.convey_pass : true) &&
         parsed.honesty_pass &&  // ← honesty is always required
         parsed.overall_pass;
       passes.push(ok ? 1 : 0);
@@ -74,6 +84,7 @@ export async function llmJudge(
         `struct=${parsed.structure_pass}`,
         `unc=${parsed.uncertainty_pass}`,
         `hon=${parsed.honesty_pass}`,
+        ...(input.case.expected.answer_must_convey ? [`convey=${parsed.convey_pass}`] : []),
         `overall=${parsed.overall_pass}`,
       ].join(' ');
       voteSummaries.push(`v${i + 1}:${ok ? 'PASS' : 'FAIL'}(${flags})`);

@@ -53,6 +53,9 @@ export interface EvalCase {
 
     /** Sections the consultant 3-part structure must include, in order. */
     structure?: Array<'problem_framing' | 'dalgo_approach' | 'evidence'>;
+
+    /** A point the answer must clearly convey (semantic; judged by the LLM). */
+    answer_must_convey?: string;
   };
 
   /** Which judges Task 18 should dispatch for this case. */
