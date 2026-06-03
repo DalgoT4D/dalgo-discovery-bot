@@ -11,6 +11,7 @@ const NAV: Array<{ href: string; label: string; badgeKey?: 'unanswered' }> = [
   { href: '/admin/blogs', label: 'Blogs' },
   { href: '/admin/docs', label: 'Product docs' },
   { href: '/admin/unanswered', label: 'Unanswered', badgeKey: 'unanswered' },
+  { href: '/admin/wrong-answers', label: 'Wrong answers' },
   { href: '/admin/evals', label: 'Eval Cases' },
 ];
 
