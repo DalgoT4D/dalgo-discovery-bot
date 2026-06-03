@@ -15,6 +15,7 @@ export function WrongAnswerModal({
 }) {
   const [stage, setStage] = useState<Stage>('reason');
   const [reason, setReason] = useState('');
+  const [suggested, setSuggested] = useState('');
   const [reportId, setReportId] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [chosen, setChosen] = useState<Candidate | null>(null);
@@ -28,7 +29,7 @@ export function WrongAnswerModal({
       const res = await fetch('/api/admin/wrong-answers', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ message_id: messageId, reason }),
+        body: JSON.stringify({ message_id: messageId, reason, suggested_answer: suggested || undefined }),
       });
       if (res.status === 401) {
         // Admin badge on the chat is bound to sessions.is_admin (DB), but
@@ -127,6 +128,14 @@ export function WrongAnswerModal({
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. The bot claimed Dalgo has RLS, but RLS is a Superset feature."
               rows={5}
+              className="w-full border border-border rounded-md p-2 text-sm bg-card text-foreground"
+            />
+            <label className="text-sm font-medium text-foreground">What should it have said? (optional)</label>
+            <textarea
+              value={suggested}
+              onChange={(e) => setSuggested(e.target.value)}
+              placeholder="The correct answer, if you know it — the assistant will draft a KB fix from this."
+              rows={4}
               className="w-full border border-border rounded-md p-2 text-sm bg-card text-foreground"
             />
             <div className="flex gap-2 justify-end">

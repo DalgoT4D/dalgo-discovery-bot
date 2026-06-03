@@ -7,6 +7,7 @@ import type { Candidate } from '@/lib/admin/wrong-answer-types';
 const CreateBody = z.object({
   message_id: z.string().uuid(),
   reason: z.string().min(1),
+  suggested_answer: z.string().optional(),
 });
 
 type Trace = {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  let body: { message_id: string; reason: string };
+  let body: { message_id: string; reason: string; suggested_answer?: string };
   try {
     body = CreateBody.parse(await req.json());
   } catch (e) {
@@ -65,10 +66,10 @@ export async function POST(req: NextRequest) {
   const email = session.user.email ?? 'unknown';
   const { rows } = await query<{ id: string }>(
     `INSERT INTO wrong_answer_reports
-       (message_id, reason, retrieval_trace_snap, reported_by)
-     VALUES ($1, $2, $3::jsonb, $4)
+       (message_id, reason, suggested_answer, retrieval_trace_snap, reported_by)
+     VALUES ($1, $2, $3, $4::jsonb, $5)
      RETURNING id`,
-    [body.message_id, body.reason, trace ? JSON.stringify(trace) : null, email],
+    [body.message_id, body.reason, body.suggested_answer ?? null, trace ? JSON.stringify(trace) : null, email],
   );
 
   const candidates = await parseCandidates(trace);

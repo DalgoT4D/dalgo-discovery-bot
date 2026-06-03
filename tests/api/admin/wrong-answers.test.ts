@@ -88,6 +88,24 @@ describe('POST /api/admin/wrong-answers', () => {
     const json = await res.json();
     expect(json.candidates).toEqual([]);
   });
+
+  it('persists suggested_answer when provided', async () => {
+    const res = await createPost(
+      req('http://t/api/admin/wrong-answers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ message_id: messageId, reason: 'wrong detail', suggested_answer: 'should say Z' }),
+      }) as any,
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.id).toBeTruthy();
+    const { rows } = await query<{ suggested_answer: string }>(
+      `SELECT suggested_answer FROM wrong_answer_reports WHERE id = $1`,
+      [json.id],
+    );
+    expect(rows[0].suggested_answer).toBe('should say Z');
+  });
 });
 
 describe('PATCH /api/admin/wrong-answers/[id]', () => {
