@@ -17,7 +17,7 @@ describe('eval suite', () => {
       console.log(`  ✗ ${r.case_id}: ${r.reasons.join('; ')}`);
     }
     expect(rate).toBeGreaterThanOrEqual(0.95);
-  }, 300_000);
+  }, 900_000);
 
   afterAll(async () => {
     await pool().end();

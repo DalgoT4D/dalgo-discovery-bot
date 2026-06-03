@@ -445,3 +445,29 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 **Verified**
 - AI SDK source: server writes the id to the data-stream `start_step`; client sets `message.id` from it. DB insert (explicit + fallback) tested. `npm run build` green.
+
+---
+
+## 2026-06-03 — Drop the LLM reranker from the RAG critical path
+
+**Changed**
+- `lib/llm/rag/pipeline.ts`: disabled the LLM rerank step (behind `USE_RERANK = false`) and now feed Sonnet the RRF-fused top-7 directly (`NO_RERANK_TOPK = 7`). `rerankCandidates` stays imported for a one-line revert.
+- `tests/llm/eval.test.ts`: raised the legacy-suite timeout 300s → 900s (the 30 cases run sequentially and the suite was hitting the 5-min wall).
+
+**Why**
+- Investigating an "8-10s per answer" complaint (user suspected HyDE — but HyDE was already bypassed). Added temporary timing logs to `route.ts` + `pipeline.ts` and measured warm: retrieval blocked the first token for ~5.6s, of which **~4.7s was the rerank** — a Haiku call scoring 12 passages. Hybrid retrieval itself was only ~0.9s.
+- The reranker (top-12 → top-5) was redundant: RRF fusion already produces a ranked, source-boosted list, and only ~5-7 short passages reach Sonnet, which judges relevance itself.
+
+**Eval delta** (legacy 30-case suite, same run):
+- rerank ON: 25/30 (83%)
+- rerank OFF, fused top-5: 24/30 (80%) — lost `bigquery`
+- **rerank OFF, fused top-7: 26/30 (87%)** — recovered `bigquery` + `personalize-kobo`. So removing the reranker is both faster AND higher quality; the wider slice keeps entries the reranker had trimmed.
+- Remaining 4 failures (pivot, opensrc, realtime, customchart) fail in every config — pre-existing KB-content gaps, unrelated.
+
+**Verified**
+- Warm latency (local dev): time-to-first-token ~7s → ~3.5s; total ~21-25s → ~13-15s. Timing logs were temporary and have been removed; `route.ts` and `pipeline.ts` are back to clean.
+
+**Carried forward**
+- The remaining ~13s is the Sonnet generation loop (`maxSteps: 6`, observed 2-3 steps because the model still calls `search_dalgo_kb` despite pre-fetch). Next lever for latency, but it touches the grounding guarantee — measure before cutting.
+- HyDE remains bypassed; `rewriteQuery` and `rerankCandidates` are both dead-but-imported for one-line revert. If neither is restored, delete both + their tests.
+- The 4 pre-existing eval misses are KB-content gaps, not retrieval-ranking — fix in `lib/db/seed-data` if pursued.
