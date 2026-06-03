@@ -46,9 +46,15 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     candidates = kb.rows.map((r) => ({ kb_id: r.id, question: r.question_variants?.[0] ?? '', snippet: (r.canonical_answer ?? '').slice(0, 200) }));
   }
 
-  const draft = await draftKbFix({
-    question, wrongAnswer: rep.answer_text, reason: rep.reason,
-    suggestedAnswer: rep.suggested_answer ?? undefined, candidates,
-  });
+  let draft;
+  try {
+    draft = await draftKbFix({
+      question, wrongAnswer: rep.answer_text, reason: rep.reason,
+      suggestedAnswer: rep.suggested_answer ?? undefined, candidates,
+    });
+  } catch (e) {
+    console.error('[draft-fix] failed:', e);
+    return NextResponse.json({ error: 'Could not draft a fix automatically. Try again.' }, { status: 502 });
+  }
   return NextResponse.json({ ...draft, question });
 }

@@ -53,9 +53,14 @@ Return ONLY this JSON (no markdown):
 
   const { text } = await generateText({ model: anthropic('claude-sonnet-4-6'), prompt, maxTokens: 1500 });
   const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-  const parsed = JSON.parse(cleaned) as DraftFixResult;
+  let parsed: DraftFixResult;
+  try {
+    parsed = JSON.parse(cleaned) as DraftFixResult;
+  } catch {
+    throw new Error(`draftKbFix: model returned unparseable JSON: ${cleaned.slice(0, 200)}`);
+  }
 
-  if (parsed.action !== 'edit') parsed.action = 'create';
+  parsed.action = String(parsed.action ?? '').toLowerCase() === 'edit' ? 'edit' : 'create';
   if (parsed.action === 'create') delete parsed.target_kb_id;
   parsed.draft.question_variants = (parsed.draft.question_variants ?? []).filter((s) => s && s.trim());
   if (parsed.draft.question_variants.length === 0) parsed.draft.question_variants = [input.question];
