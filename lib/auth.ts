@@ -55,6 +55,11 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers,
+  // Self-hosted (Docker/EC2) behind our own proxy: trust the Host header.
+  // Without this, Auth.js v5 rejects every request with UntrustedHost once
+  // NODE_ENV=production (it only auto-trusts localhost under `next dev`).
+  // Can also be set via the AUTH_TRUST_HOST env var.
+  trustHost: true,
   pages: { signIn: '/signin' },
   callbacks: {
     async signIn({ user, account }) {

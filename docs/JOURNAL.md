@@ -418,3 +418,16 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 **Carried forward**
 - `sessions.pdf_url` / `pdf_text` columns remain (harmless, now always null). DB prompt text in `dalgo_prompts` may still mention uploading a PDF — trim there if the bot offers it in conversation.
+
+---
+
+## 2026-06-03 — Fix admin auth in Docker (UntrustedHost)
+
+**Changed**
+- `lib/auth.ts`: added `trustHost: true` to the NextAuth config.
+
+**Why**
+- The container runs `NODE_ENV=production`, under which Auth.js v5 rejects every `/api/auth/*` request with `UntrustedHost` (it only auto-trusts localhost under `next dev`). This broke the admin panel (blank "Server error" page). `trustHost: true` is the standard setting for self-hosted Auth.js behind your own proxy (Docker/EC2). Verified: `/api/auth/session` → 200, providers load, no auth errors.
+
+**Carried forward**
+- On EC2, set `NEXTAUTH_URL` (and `NEXTAUTH_SECRET`) to the real domain in the deploy env.
