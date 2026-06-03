@@ -45,6 +45,32 @@ async function parseCandidates(trace: Trace | null): Promise<Candidate[]> {
   }
 }
 
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+  const status = new URL(req.url).searchParams.get('status'); // pending | resolved | dismissed | null(all)
+  const params: unknown[] = [];
+  let where = '';
+  if (status && ['pending', 'resolved', 'dismissed'].includes(status)) {
+    params.push(status);
+    where = `WHERE w.status = $1`;
+  }
+
+  const { rows } = await query(
+    `SELECT w.id, w.message_id, w.reason, w.suggested_answer, w.status, w.fix_kind,
+            w.fixed_kb_id, w.reported_by, w.reported_at, w.resolved_by, w.resolved_at,
+            m.session_id,
+            (m.content->>'text') AS answer_text
+       FROM wrong_answer_reports w
+       JOIN messages m ON m.id = w.message_id
+       ${where}
+      ORDER BY (w.status = 'pending') DESC, w.reported_at DESC`,
+    params,
+  );
+  return NextResponse.json({ reports: rows });
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
