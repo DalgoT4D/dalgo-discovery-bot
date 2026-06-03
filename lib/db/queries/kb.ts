@@ -1,3 +1,4 @@
+import type { PoolClient } from 'pg';
 import { query } from '../client';
 import { embed } from '@/lib/embeddings';
 
@@ -108,4 +109,87 @@ export async function insertKbFromMessage(input: PromoteKbInput): Promise<string
     ],
   );
   return rows[0].id;
+}
+
+// ─── Transaction-aware write helpers (used by the resolve endpoint, Task 8) ───
+// The caller owns BEGIN/COMMIT. These helpers just run their statements on the
+// provided PoolClient and never open their own transaction.
+
+export interface KbInsert {
+  category: string;
+  question_variants: string[];
+  canonical_answer: string;
+  status: 'yes' | 'partial' | 'no' | 'roadmap';
+  ngo_framing: string | null;
+  evidence: string[];
+  notes_for_sales: string | null;
+  embeddingLiteral: string;          // `[..1536..]`
+  source: 'seed' | 'admin_manual' | 'promoted_from_conversation' | 'promoted_from_unanswered' | 'wrong_answer_fix';
+  source_message_id: string | null;
+  author_email: string | null;
+}
+
+export async function insertKbEntryTx(client: PoolClient, e: KbInsert): Promise<string> {
+  const { rows } = await client.query<{ id: string }>(
+    `INSERT INTO dalgo_knowledge_base
+       (category, question_variants, canonical_answer, status, ngo_framing, evidence,
+        notes_for_sales, embedding, last_verified, source, source_message_id, author_email)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::vector, now(), $9,$10,$11)
+     RETURNING id`,
+    [e.category, e.question_variants, e.canonical_answer, e.status, e.ngo_framing,
+     e.evidence, e.notes_for_sales, e.embeddingLiteral, e.source, e.source_message_id, e.author_email],
+  );
+  return rows[0].id;
+}
+
+export interface KbUpdate {
+  question_variants: string[];
+  canonical_answer: string;
+  status: 'yes' | 'partial' | 'no' | 'roadmap';
+  ngo_framing?: string | null;
+  evidence?: string[];
+  notes_for_sales?: string | null;
+}
+
+export async function versionAndUpdateKbTx(
+  client: PoolClient, id: string, patch: KbUpdate, updatedBy: string, embeddingLiteral: string,
+): Promise<void> {
+  // 1. Read + lock the current row (snapshot prior state before update)
+  const cur = await client.query<{
+    category: string;
+    question_variants: string[];
+    canonical_answer: string;
+    status: string;
+    ngo_framing: string | null;
+    evidence: string[] | null;
+    notes_for_sales: string | null;
+  }>(
+    `SELECT category, question_variants, canonical_answer, status, ngo_framing, evidence, notes_for_sales
+       FROM dalgo_knowledge_base WHERE id=$1 FOR UPDATE`,
+    [id],
+  );
+  if (cur.rows.length === 0) throw new Error('kb entry not found');
+  const prev = cur.rows[0];
+
+  // 2. Snapshot prior state into dalgo_kb_versions (columns match the PATCH route exactly)
+  await client.query(
+    `INSERT INTO dalgo_kb_versions
+       (kb_id, category, question_variants, canonical_answer, status,
+        ngo_framing, evidence, notes_for_sales, updated_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    [id, prev.category, prev.question_variants, prev.canonical_answer, prev.status,
+     prev.ngo_framing, prev.evidence ?? [], prev.notes_for_sales, updatedBy],
+  );
+
+  // 3. Apply the update
+  await client.query(
+    `UPDATE dalgo_knowledge_base
+        SET question_variants=$1, canonical_answer=$2, status=$3,
+            ngo_framing=$4, evidence=$5, notes_for_sales=$6,
+            embedding=$7::vector, last_verified=now(), updated_at=now()
+      WHERE id=$8`,
+    [patch.question_variants, patch.canonical_answer, patch.status,
+     patch.ngo_framing ?? prev.ngo_framing, patch.evidence ?? prev.evidence ?? [],
+     patch.notes_for_sales ?? prev.notes_for_sales, embeddingLiteral, id],
+  );
 }
