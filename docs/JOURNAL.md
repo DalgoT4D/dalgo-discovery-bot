@@ -6,24 +6,6 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
-## 2026-06-04 — Wrong-answer resolve endpoint + review modal (Task 8)
-
-**Added**
-- `POST /api/admin/wrong-answers/[id]/resolve` — transactional resolve endpoint. Three actions: `create` (inserts a new KB entry via `insertKbEntryTx`), `edit` (versions + updates an existing entry via `versionAndUpdateKbTx`), `dismiss`. All writes (KB insert/update, eval case upsert, `wrong_answer_reports` status flip) happen in one transaction with rollback on error. Embedding is computed before the transaction opens (avoids holding a connection across a network call). After commit, re-runs retrieval (`runPipeline`) to verify the fixed entry ranks top.
-- `components/admin/wrong-answer-resolve-modal.tsx` — replaces the stub. On open: calls the `draft-fix` endpoint for an LLM-drafted fix. Admin can toggle Create/Edit, edit variants + answer + status, opt in/out of regression eval case. Approve calls resolve; Dismiss short-circuits to dismiss. Post-resolve shows a retrieval verification result and a "Run eval now" link to `/admin/evals`.
-- `tests/api/admin/wrong-answers-resolve.test.ts` — TDD test: seeds session + messages + report, calls POST resolve, asserts KB row created, eval case present, report status=resolved/fix_kind=created.
-
-**Why**
-- Closes the wrong-answer review loop: admin opens modal → LLM drafts fix → admin edits → approve → KB updated + eval case registered + report resolved, all atomic.
-
-**Eval delta**
-- Not re-run. Unit test green (1/1). Build clean: resolve route listed in build output.
-
-**Carried forward**
-- "Run eval now" in the modal opens `/admin/evals` (full suite). A later task may wire single-case targeted re-run from the modal.
-
----
-
 ## 2026-05-31 — Chat greeting + plain-language jargon rule
 
 **Added**
@@ -489,3 +471,31 @@ this is a timeline you'll scan a year from now, not a design doc.
 - The remaining ~13s is the Sonnet generation loop (`maxSteps: 6`, observed 2-3 steps because the model still calls `search_dalgo_kb` despite pre-fetch). Next lever for latency, but it touches the grounding guarantee — measure before cutting.
 - HyDE remains bypassed; `rewriteQuery` and `rerankCandidates` are both dead-but-imported for one-line revert. If neither is restored, delete both + their tests.
 - The 4 pre-existing eval misses are KB-content gaps, not retrieval-ranking — fix in `lib/db/seed-data` if pursued.
+
+---
+
+## 2026-06-04 — Wrong-answer review queue + LLM-assisted KB fix
+
+**Added**
+- Admin **review queue** for wrong-answer reports — the table was previously write-only with no read surface. `GET /api/admin/wrong-answers` (status filter + message/conversation join) feeds `/admin/wrong-answers` (`components/admin/wrong-answers-table.tsx`) + a nav entry.
+- Mark-wrong now captures an optional **suggested answer** (`wrong_answer_reports.suggested_answer`) alongside the reason.
+- **LLM draft-fix**: `lib/llm/draft-kb-fix.ts` + `POST .../[id]/draft-fix` — given the wrong answer, reason, suggested answer, and the retrieval-trace candidates, drafts a corrected KB entry and decides **edit-existing vs create-new** (and now picks the KB **category**, validated against the schema enum).
+- **Transactional resolve**: `POST .../[id]/resolve` (create | edit | dismiss). On approve it writes the KB (re-embedded + versioned via new transaction-aware helpers `insertKbEntryTx` / `versionAndUpdateKbTx` in `lib/db/queries/kb.ts`, provenance `source='wrong_answer_fix'`), upserts a regression **eval case**, and flips the report to `resolved` — all in one transaction (embedding computed before BEGIN). After commit it re-runs `runPipeline` to confirm the fixed entry ranks top.
+- **`answer_must_convey`** criterion on the llm-judge so the auto-created eval case meaningfully asserts the corrected answer; "Run eval now" in the modal triggers that single case via the existing `eval-cases/[id]/test` endpoint.
+- New lifecycle columns on `wrong_answer_reports` (`status`, `fix_kind`, `resolved_by/at`) with idempotent upgrade-path ALTERs in `schema.sql`; `wrong_answer_fix` added to the KB `source` CHECK.
+- Tests across all of the above (schema, list endpoint, draft-fix incl. parse-failure, kb write helpers, resolve transaction).
+
+**Why**
+- Closes the loop with no gaps: flag (chat or admin) → queue → LLM-drafted fix → admin approves → KB updated (re-embedded, so retrieval actually changes) → verified by re-run → regression-tested by an eval case. DB is the source of truth; fixes carry across machines via DB migration, not re-seed.
+
+**Eval delta**
+- Not re-run (no KB-content change shipped). Full non-eval suite green: 64 files, 219 passed / 1 skipped. Build clean.
+
+**Carried forward**
+- Removing the LLM reranker (separate same-day entry) is the active retrieval path; unrelated to this feature.
+- `draftKbFix` falls back to category `limitations` if the model returns an unknown category.
+
+**Refs**
+- Spec: `docs/superpowers/specs/2026-06-03-wrong-answer-review-and-kb-fix-design.md`
+- Plan: `docs/superpowers/plans/2026-06-03-wrong-answer-review-and-kb-fix.md`
+- Branch: `feat/wrong-answer-review`
