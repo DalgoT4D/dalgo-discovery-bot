@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { VALID_CATEGORIES } from '@/lib/llm/draft-kb-fix';
 
 type Draft = {
   category: string; question_variants: string[]; canonical_answer: string;
@@ -24,7 +25,7 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
       if (!res.ok) { setError(`Draft failed: HTTP ${res.status}`); setLoading(false); return; }
       const j = await res.json();
       setAction(j.action); setTargetKbId(j.target_kb_id);
-      setDraft({ category: 'ai', ...j.draft }); setLoading(false);
+      setDraft({ ...j.draft, category: j.draft.category ?? 'limitations' }); setLoading(false);
     })();
   }, [reportId]);
 
@@ -42,10 +43,12 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
   }
 
   async function dismiss() {
-    setBusy(true);
-    await fetch(`/api/admin/wrong-answers/${reportId}/resolve`, {
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/admin/wrong-answers/${reportId}/resolve`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'dismiss' }) });
-    setBusy(false); onClose();
+    setBusy(false);
+    if (!res.ok) { setError(`Dismiss failed: HTTP ${res.status}`); return; }
+    onClose();
   }
 
   function runEval() {
@@ -90,6 +93,11 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
             <select className="rounded border border-border bg-card p-1 text-sm" value={draft.status}
               onChange={(e) => setDraft({ ...draft, status: e.target.value as Draft['status'] })}>
               {['yes', 'partial', 'no', 'roadmap'].map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <label className="block text-xs text-muted-foreground">Category</label>
+            <select className="rounded border border-border bg-card p-1 text-sm" value={draft.category}
+              onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
+              {VALID_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <label className="flex items-center gap-2 text-sm text-foreground">
               <input type="checkbox" checked={addEval} onChange={(e) => setAddEval(e.target.checked)} /> Add eval case (regression test)

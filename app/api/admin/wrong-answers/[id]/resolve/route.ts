@@ -10,7 +10,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const Draft = z.object({
-  category: z.string(),
+  category: z.enum(['data_sources', 'transforms', 'dashboards', 'orchestration', 'ai', 'sharing', 'rbac', 'security', 'deployment', 'pricing', 'mission', 'stack', 'limitations', 'case_studies', 'community']),
   question_variants: z.array(z.string().min(1)).min(1),
   canonical_answer: z.string().min(1),
   status: z.enum(['yes', 'partial', 'no', 'roadmap']),

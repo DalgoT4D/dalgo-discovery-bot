@@ -5,7 +5,7 @@ vi.mock('ai', () => ({
     text: JSON.stringify({
       action: 'edit',
       target_kb_id: '11111111-1111-1111-1111-111111111111',
-      draft: { question_variants: ['Does Dalgo do qualitative analysis?'], canonical_answer: 'No, not as of now.', status: 'no', evidence: [] },
+      draft: { category: 'ai', question_variants: ['Does Dalgo do qualitative analysis?'], canonical_answer: 'No, not as of now.', status: 'no', evidence: [] },
     }),
   })),
 }));

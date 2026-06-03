@@ -1,6 +1,14 @@
 import { generateText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 
+export const VALID_CATEGORIES = [
+  'data_sources', 'transforms', 'dashboards', 'orchestration', 'ai',
+  'sharing', 'rbac', 'security', 'deployment', 'pricing', 'mission',
+  'stack', 'limitations', 'case_studies', 'community',
+] as const;
+
+export type KbCategory = typeof VALID_CATEGORIES[number];
+
 export interface DraftCandidate { kb_id: string; question: string; snippet: string }
 
 export interface DraftFixInput {
@@ -12,6 +20,7 @@ export interface DraftFixInput {
 }
 
 export interface KbDraft {
+  category: string;
   question_variants: string[];
   canonical_answer: string;
   status: 'yes' | 'partial' | 'no' | 'roadmap';
@@ -31,6 +40,8 @@ export async function draftKbFix(input: DraftFixInput): Promise<DraftFixResult> 
     ? input.candidates.map((c, i) => `${i + 1}. [kb_id=${c.kb_id}] Q: ${c.question}\n   A: ${c.snippet}`).join('\n')
     : '(no KB entries fed this answer)';
 
+  const categoryList = VALID_CATEGORIES.join(', ');
+
   const prompt = `You maintain the knowledge base for a chatbot that helps NGO leaders evaluate Dalgo.
 An admin reported a wrong answer. Produce a corrected KB entry.
 
@@ -48,8 +59,11 @@ Decide:
 
 Honesty rules: if Dalgo does NOT do something, status must be "no" and the answer must say so plainly. Never invent customers or URLs. If the admin gave a suggested answer, base the corrected answer on it.
 
+Valid categories: ${categoryList}
+Pick the single best-fitting category for this KB entry and include it as "category" in the draft.
+
 Return ONLY this JSON (no markdown):
-{ "action": "edit"|"create", "target_kb_id": "<uuid or omit>", "draft": { "question_variants": ["..."], "canonical_answer": "...", "status": "yes"|"partial"|"no"|"roadmap", "ngo_framing": null, "evidence": [], "notes_for_sales": null } }`;
+{ "action": "edit"|"create", "target_kb_id": "<uuid or omit>", "draft": { "category": "<one of the valid categories>", "question_variants": ["..."], "canonical_answer": "...", "status": "yes"|"partial"|"no"|"roadmap", "ngo_framing": null, "evidence": [], "notes_for_sales": null } }`;
 
   const { text } = await generateText({ model: anthropic('claude-sonnet-4-6'), prompt, maxTokens: 1500 });
   const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -66,5 +80,6 @@ Return ONLY this JSON (no markdown):
   if (parsed.draft.question_variants.length === 0) parsed.draft.question_variants = [input.question];
   if (!['yes', 'partial', 'no', 'roadmap'].includes(parsed.draft.status)) parsed.draft.status = 'no';
   parsed.draft.evidence = parsed.draft.evidence ?? [];
+  if (!VALID_CATEGORIES.includes(parsed.draft.category as KbCategory)) parsed.draft.category = 'limitations';
   return parsed;
 }
