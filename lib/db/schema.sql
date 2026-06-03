@@ -226,14 +226,9 @@ CREATE INDEX IF NOT EXISTS problem_patterns_tsv_idx       ON dalgo_problem_patte
 
 ALTER TABLE dalgo_knowledge_base
   ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'seed';
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'dalgo_knowledge_base_source_check'
-  ) THEN
-    ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_source_check
-      CHECK (source IN ('seed','admin_manual','promoted_from_conversation','promoted_from_unanswered'));
-  END IF;
-END $$;
+ALTER TABLE dalgo_knowledge_base DROP CONSTRAINT IF EXISTS dalgo_knowledge_base_source_check;
+ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_source_check
+  CHECK (source IN ('seed','admin_manual','promoted_from_conversation','promoted_from_unanswered','wrong_answer_fix'));
 
 ALTER TABLE dalgo_knowledge_base
   ADD COLUMN IF NOT EXISTS source_message_id uuid REFERENCES messages(id) ON DELETE SET NULL;
@@ -271,10 +266,16 @@ CREATE TABLE IF NOT EXISTS wrong_answer_reports (
   id                   bigserial PRIMARY KEY,
   message_id           uuid NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   reason               text NOT NULL,
+  suggested_answer     text,
   retrieval_trace_snap jsonb,
   fixed_kb_id          uuid REFERENCES dalgo_knowledge_base(id) ON DELETE SET NULL,
+  fix_kind             text CHECK (fix_kind IN ('edited','created')),
+  status               text NOT NULL DEFAULT 'pending'
+                         CHECK (status IN ('pending','resolved','dismissed')),
   reported_by          text NOT NULL,
-  reported_at          timestamptz NOT NULL DEFAULT now()
+  reported_at          timestamptz NOT NULL DEFAULT now(),
+  resolved_by          text,
+  resolved_at          timestamptz
 );
 CREATE INDEX IF NOT EXISTS wrong_answer_reports_msg_idx
   ON wrong_answer_reports (message_id);
