@@ -4,6 +4,7 @@ import { query, withClient } from '@/lib/db/client';
 import { embed } from '@/lib/embeddings';
 import { insertKbEntryTx, versionAndUpdateKbTx } from '@/lib/db/queries/kb';
 import { runPipeline } from '@/lib/llm/rag/pipeline';
+import { invalidateEvalCaseCache } from '@/lib/llm/eval/case-source';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
@@ -113,6 +114,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       throw err;
     }
   });
+
+  // The eval case was inserted inline (bypassing the eval-cases POST route),
+  // so bust its list cache — otherwise the modal's immediate "Run eval now"
+  // lookup can miss the just-created case for up to the 60s TTL.
+  if (body.add_eval_case) invalidateEvalCaseCache('wrong_answer_fix');
 
   let verified = false;
   try {
