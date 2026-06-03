@@ -431,3 +431,17 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 **Carried forward**
 - On EC2, set `NEXTAUTH_URL` (and `NEXTAUTH_SECRET`) to the real domain in the deploy env.
+
+---
+
+## 2026-06-03 — Fix "report wrong answer" 400 on freshly-streamed messages
+
+**Changed**
+- `app/api/chat/route.ts`: pre-generate the assistant message id (`randomUUID`) and pass `experimental_generateMessageId` to `streamText`, so the id streamed to the client (`useChat` `m.id`) equals the persisted DB row id. Persist via the new `appendMessage(..., id)` arg.
+- `lib/db/queries/messages.ts`: `appendMessage` accepts an optional explicit `id` (COALESCE to `gen_random_uuid()`).
+
+**Why**
+- Admin "Report a wrong answer" POSTed `message_id = m.id`, but for messages streamed in the current session `m.id` was useChat's client-generated id (not a UUID), so the route's Zod `uuid()` check returned HTTP 400. (Reloaded history worked because it carried DB UUIDs.) Now both paths use the DB UUID.
+
+**Verified**
+- AI SDK source: server writes the id to the data-stream `start_step`; client sets `message.id` from it. DB insert (explicit + fallback) tested. `npm run build` green.

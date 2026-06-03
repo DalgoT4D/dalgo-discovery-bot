@@ -22,12 +22,16 @@ export async function appendMessage(
   role: 'user' | 'assistant' | 'tool',
   content: unknown,
   tokenCount?: number,
+  id?: string,
 ): Promise<MessageRow> {
+  // When an explicit id is given (the assistant message id streamed to the
+  // client, so it matches what the UI reports for wrong-answers), use it;
+  // otherwise fall back to a DB-generated UUID.
   const { rows } = await query<MessageRow>(
-    `INSERT INTO messages (session_id, role, content, token_count)
-     VALUES ($1, $2, $3::jsonb, $4)
+    `INSERT INTO messages (id, session_id, role, content, token_count)
+     VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4::jsonb, $5)
      RETURNING *`,
-    [sessionId, role, JSON.stringify(content), tokenCount ?? null],
+    [id ?? null, sessionId, role, JSON.stringify(content), tokenCount ?? null],
   );
   return rows[0];
 }

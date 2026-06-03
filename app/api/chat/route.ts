@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { streamText, type CoreMessage } from 'ai';
 import { anthropic, MODEL } from '@/lib/llm/client';
 import { staticSystem, ngoContextBlock } from '@/lib/llm/system-prompt';
@@ -190,11 +191,18 @@ export async function POST(req: NextRequest) {
     ...(retrievalBlock ? [{ role: 'system' as const, content: retrievalBlock }] : []),
   ];
 
+  // Pre-generate the assistant message id so the id streamed to the client
+  // (useChat's m.id) equals the persisted DB row id. Without this, freshly
+  // streamed messages carry a client-only id and admin "report wrong answer"
+  // fails with a 400 (non-UUID message_id).
+  const assistantMessageId = randomUUID();
+
   const result = streamText({
     model: anthropic(MODEL),
     messages: [...systemMessages, ...messages],
     tools: buildToolset(session_id),
     maxSteps: 6,
+    experimental_generateMessageId: () => assistantMessageId,
     onFinish: async ({ text, usage, steps }) => {
       // Did the model flag this turn as unproductive? If so, add a strike
       // (which may block the IP on the next request); otherwise the turn was
@@ -213,6 +221,7 @@ export async function POST(req: NextRequest) {
         'assistant',
         { text },
         usage?.completionTokens,
+        assistantMessageId,
       );
       if (trace) {
         await query(
