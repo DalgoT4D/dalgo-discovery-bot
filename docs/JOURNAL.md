@@ -6,6 +6,24 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-06-04 — Wrong-answer resolve endpoint + review modal (Task 8)
+
+**Added**
+- `POST /api/admin/wrong-answers/[id]/resolve` — transactional resolve endpoint. Three actions: `create` (inserts a new KB entry via `insertKbEntryTx`), `edit` (versions + updates an existing entry via `versionAndUpdateKbTx`), `dismiss`. All writes (KB insert/update, eval case upsert, `wrong_answer_reports` status flip) happen in one transaction with rollback on error. Embedding is computed before the transaction opens (avoids holding a connection across a network call). After commit, re-runs retrieval (`runPipeline`) to verify the fixed entry ranks top.
+- `components/admin/wrong-answer-resolve-modal.tsx` — replaces the stub. On open: calls the `draft-fix` endpoint for an LLM-drafted fix. Admin can toggle Create/Edit, edit variants + answer + status, opt in/out of regression eval case. Approve calls resolve; Dismiss short-circuits to dismiss. Post-resolve shows a retrieval verification result and a "Run eval now" link to `/admin/evals`.
+- `tests/api/admin/wrong-answers-resolve.test.ts` — TDD test: seeds session + messages + report, calls POST resolve, asserts KB row created, eval case present, report status=resolved/fix_kind=created.
+
+**Why**
+- Closes the wrong-answer review loop: admin opens modal → LLM drafts fix → admin edits → approve → KB updated + eval case registered + report resolved, all atomic.
+
+**Eval delta**
+- Not re-run. Unit test green (1/1). Build clean: resolve route listed in build output.
+
+**Carried forward**
+- "Run eval now" in the modal opens `/admin/evals` (full suite). A later task may wire single-case targeted re-run from the modal.
+
+---
+
 ## 2026-05-31 — Chat greeting + plain-language jargon rule
 
 **Added**
