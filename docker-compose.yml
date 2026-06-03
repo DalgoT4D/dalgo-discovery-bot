@@ -40,6 +40,10 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      # Self-hosted: trust the Host header (Auth.js blocks all /api/auth/*
+      # with UntrustedHost under NODE_ENV=production otherwise). Read at
+      # runtime, so it applies without a rebuild.
+      AUTH_TRUST_HOST: "true"
       # Inside the compose network the DB is the 'postgres' service on 5432.
       # This overrides the localhost:5436 DATABASE_URL in .env.local.
       DATABASE_URL: postgres://dalgo:dalgo_dev@postgres:5432/dalgo_discovery

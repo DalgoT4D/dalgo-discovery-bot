@@ -19,5 +19,8 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      # Self-hosted behind your own proxy: trust the Host header so Auth.js
+      # doesn't reject /api/auth/* with UntrustedHost.
+      AUTH_TRUST_HOST: "true"
       # In-process node-cron (instrumentation.ts) handles rate-limit cleanup;
       # set DISABLE_CRON=true if you instead trigger it via EventBridge.
