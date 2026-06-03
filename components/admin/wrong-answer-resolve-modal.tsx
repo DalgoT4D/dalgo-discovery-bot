@@ -9,6 +9,13 @@ type Draft = {
   evidence?: string[]; notes_for_sales?: string | null;
 };
 
+type EvalStatus =
+  | { state: 'idle' }
+  | { state: 'running' }
+  | { state: 'pass'; notes: string[] }
+  | { state: 'fail'; notes: string[] }
+  | { state: 'error'; message: string };
+
 export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: number; onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<'edit' | 'create'>('create');
@@ -18,6 +25,7 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ fixed_kb_id: string; verified: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [evalStatus, setEvalStatus] = useState<EvalStatus>({ state: 'idle' });
 
   useEffect(() => {
     (async () => {
@@ -51,8 +59,36 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
     onClose();
   }
 
-  function runEval() {
-    window.open('/admin/evals', '_blank');
+  async function runEval() {
+    const caseKey = `wrong-answer-fix-${reportId}`;
+    setEvalStatus({ state: 'running' });
+    try {
+      // Look up the eval case UUID by key (filter by bucket to keep the list small)
+      const listRes = await fetch('/api/admin/eval-cases?bucket=wrong_answer_fix');
+      if (!listRes.ok) throw new Error(`Failed to fetch eval cases: HTTP ${listRes.status}`);
+      const listBody = await listRes.json() as { cases: { id: string; case_key: string }[] };
+      const evalCase = listBody.cases.find((c) => c.case_key === caseKey);
+      if (!evalCase) {
+        // Eval case not created (add_eval_case was unchecked) — fall back to dashboard
+        setEvalStatus({ state: 'error', message: 'Eval case not found — was "Add eval case" checked when approving?' });
+        return;
+      }
+
+      const testRes = await fetch(`/api/admin/eval-cases/${evalCase.id}/test`, { method: 'POST' });
+      if (!testRes.ok) throw new Error(`Eval run failed: HTTP ${testRes.status}`);
+      const testBody = await testRes.json() as {
+        result: { pass: boolean; judgeResults: { pass: boolean; notes: string }[] };
+      };
+
+      const notes = testBody.result.judgeResults.map((jr) => jr.notes).filter(Boolean);
+      if (testBody.result.pass) {
+        setEvalStatus({ state: 'pass', notes });
+      } else {
+        setEvalStatus({ state: 'fail', notes });
+      }
+    } catch (err) {
+      setEvalStatus({ state: 'error', message: String(err) });
+    }
   }
 
   return (
@@ -71,10 +107,54 @@ export function WrongAnswerResolveModal({ reportId, onClose }: { reportId: numbe
               KB {action === 'edit' ? 'updated' : 'created'}. Retrieval re-check:{' '}
               {result.verified ? '✓ fixed entry now ranks top' : '⚠ fixed entry did not surface — review the entry'}
             </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={runEval}>Run eval now</Button>
-              <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
-            </div>
+
+            {evalStatus.state === 'idle' && addEval && (
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={runEval}>Run eval now</Button>
+                <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+              </div>
+            )}
+            {evalStatus.state === 'idle' && !addEval && (
+              <div className="flex justify-end gap-2">
+                <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+              </div>
+            )}
+
+            {evalStatus.state === 'running' && (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">Running eval case…</p>
+                <div className="flex justify-end">
+                  <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+                </div>
+              </div>
+            )}
+
+            {(evalStatus.state === 'pass' || evalStatus.state === 'fail') && (
+              <div className="space-y-2">
+                <p className={`text-sm font-medium ${evalStatus.state === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
+                  {evalStatus.state === 'pass' ? '✓ Eval passed' : '✗ Eval failed'}
+                </p>
+                {evalStatus.notes.length > 0 && (
+                  <ul className="list-disc pl-4 text-xs text-muted-foreground">
+                    {evalStatus.notes.map((n, i) => <li key={i}>{n}</li>)}
+                  </ul>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => window.open('/admin/evals', '_blank')}>View evals</Button>
+                  <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+                </div>
+              </div>
+            )}
+
+            {evalStatus.state === 'error' && (
+              <div className="space-y-2">
+                <p className="text-sm text-red-600">Eval error: {evalStatus.message}</p>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => window.open('/admin/evals', '_blank')}>Open eval dashboard</Button>
+                  <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+                </div>
+              </div>
+            )}
           </div>
         ) : draft ? (
           <div className="space-y-3">
