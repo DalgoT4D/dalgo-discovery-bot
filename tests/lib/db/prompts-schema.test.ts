@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { query, pool } from '@/lib/db/client';
 
 describe('dalgo_prompts schema', () => {
-  it('has all 6 seed rows with non-empty content', async () => {
+  it('has all 7 seed rows with non-empty content', async () => {
     const expectedKeys = [
       'identity',
       'tools_inventory',
@@ -11,6 +11,7 @@ describe('dalgo_prompts schema', () => {
       'consultant_mode',
       'dalgo_vs_3rd_party',
       'fit_assessment',
+      'positioning',
     ];
     const { rows } = await query<{ key: string; content: string }>(
       `SELECT key, content FROM dalgo_prompts ORDER BY key`,
@@ -28,7 +29,7 @@ describe('dalgo_prompts schema', () => {
          FROM dalgo_prompt_versions
         GROUP BY prompt_key`,
     );
-    expect(rows.length).toBe(6);
+    expect(rows.length).toBe(7);
     for (const r of rows) {
       expect(r.n).toBeGreaterThanOrEqual(1);
     }

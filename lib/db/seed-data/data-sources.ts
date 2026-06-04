@@ -118,10 +118,12 @@ export const dataSources: KbSeed[] = [
     category: 'data_sources',
     question_variants: ['How many data sources does Dalgo support in total?'],
     canonical_answer:
-      '6 NGO-specific custom sources (Kobo, CommCare, Avni, SurveyCTO, Glific, greytHR) plus access to all 400+ standard Airbyte connectors.',
+      '600+ ready-to-use connectors in total, covering the nonprofit tool landscape — including NGO-specific custom sources Dalgo built itself (Kobo, CommCare, Avni, SurveyCTO, Glific, greytHR) plus the full standard connector catalog. If you need a connector that doesn\'t exist yet, the Dalgo team builds new ones at no cost when NGOs need them.',
     status: 'yes',
-    evidence: ['Airbyte 0.58.0 + custom sources in settings'],
-    source_audit_date: '2026-05-21',
+    evidence: ['Airbyte connector catalog + Dalgo custom sources'],
+    notes_for_sales:
+      '600+ connector figure and "Dalgo builds new connectors at no cost" confirmed by the Dalgo team, June 2026.',
+    source_audit_date: '2026-06-04',
   },
   {
     category: 'data_sources',

@@ -7,11 +7,12 @@ import { __resetForTests } from '@/lib/llm/prompts';
 describe('staticSystem (async, DB-backed)', () => {
   beforeEach(() => __resetForTests());
 
-  it('returns a Promise<string> that includes all 6 sections joined', async () => {
+  it('returns a Promise<string> that includes all sections joined', async () => {
     const result = staticSystem();
     expect(result).toBeInstanceOf(Promise);
     const text = await result;
     expect(text).toContain('Dalgo Discovery Assistant');         // identity
+    expect(text).toContain('Dalgo positioning');                 // positioning
     expect(text).toContain('search_dalgo_kb');                    // tools_inventory
     expect(text).toContain('Consultant mode');                    // consultant_mode
     expect(text).toContain('Hard boundary');                      // dalgo_vs_3rd_party

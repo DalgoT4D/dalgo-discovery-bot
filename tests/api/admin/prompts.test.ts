@@ -16,10 +16,10 @@ function req(url: string, init?: RequestInit): any {
 }
 
 describe('GET /api/admin/prompts', () => {
-  it('returns all 6 prompts', async () => {
+  it('returns all 7 prompts', async () => {
     const res = await listGet(req('http://t/api/admin/prompts') as any);
     const json = await res.json();
-    expect(json.items.length).toBe(6);
+    expect(json.items.length).toBe(7);
     expect(json.items[0]).toHaveProperty('key');
     expect(json.items[0]).toHaveProperty('content');
     expect(json.items[0]).toHaveProperty('updated_at');

@@ -6,6 +6,58 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-06-04 — KB for the new Metrics & KPIs feature
+
+**Added**
+- New KB category **`kpis`** (`lib/db/seed-data/kpis.ts`, 12 entries) for the Metrics & KPIs feature that shipped to `main` in DDP_backend (PR #1397) and webapp_v2 (PR #313). Covers: what a **Metric** is (reusable measure, Simple aggregation or Calculated SQL expression, validated against the warehouse, "Used By" tracking); what a **KPI** is (metric + target + direction + RAG thresholds + time grain); **RAG status** (On Track / Needs Attention / Off Track); **results-chain tagging** (input/output/outcome/impact + program tags — the M&E hook); **annotations / beneficiary quotes**; **KPIs on dashboards & in shared reports**; aggregations (the 6) + calculated expressions; export (PNG/CSV) + RBAC; and honest limitations.
+- `seed:kpis` npm script + `scripts/seed-kpis.ts` (targeted upsert, same pattern as `seed-positioning.ts`).
+- `kpis` added to `KbCategory`, `schema.sql` (both CHECK blocks + live `ALTER`), `seed-kb.ts`, and the `search_dalgo_kb` tool category enum.
+
+**Honesty anchors (status: no/partial)**
+- **No KPI alerting/notifications** (`status:no`) — RAG is display-only, computed live on view; nothing emails on a breach.
+- **No custom comparison period** (`status:partial`) — % change is previous-period-only, no "vs same period last year".
+- **No dimensional drill-down / metric filters** (`status:partial`) — metrics are a single number, KPIs break down by one time dimension only; "by region/gender" lives in **charts**. Verified by parallel backend + frontend code-reads (agents); both agreed there is no alert code and no Celery/scheduled recompute.
+
+**Why**
+- These are genuinely **native** Dalgo features (not Superset), so the bot can answer with confident "in Dalgo you can…" — and KPIs map cleanly onto NGO results-chains and funder targets, reinforcing the decisions-first primary benefit. The bot had nothing on them.
+
+**Eval delta**
+- Retrieval probes (k=3): "track KPIs and targets" 0.81; "on track against goals" rank 1; outcome/impact 0.62; "alert me when off track" → **`status:no` @ 0.80** (honesty works); dashboard tiles 0.78; aggregations 0.71; drill-down/comparison hit the `partial` entries. Lint clean; KB + search-tool tests 8/8.
+- **Soft spot:** "define a reusable metric" competes with a pre-existing `dashboards` entry "Can I rename metrics (alias)?" — a naming collision (old inline-chart "metrics" alias vs the new saved Metric entity). Still returns metric content; `kpis` category-filter resolves it. Consider disambiguating that old entry later.
+
+**Carried forward**
+- **Repos switched to `main`:** to study the feature I checked out `main` (from `prod/metrics_kpis_alerts` in DDP_backend and `worktree-posthog-analytics` in webapp_v2) and pulled. Switch back if you were mid-work on those branches.
+- **Prod deploy (discovery bot):** apply the category-CHECK `ALTER` for `kpis`, then run `npm run seed:kpis` against prod (targeted upsert, no reset).
+- Evidence in these entries is code paths (no public blog/docs URL exists for the feature yet) — swap in a dalgo_docs/blog URL once published.
+
+---
+
+## 2026-06-04 — Positioning layer: RTBs, competitive entries, decisions-first voice + KB dedup
+
+**Added**
+- New KB category **`positioning`** (`lib/db/seed-data/positioning.ts`, 9 entries) encoding the June 2026 Dalgo Positioning doc: category statement ("data insights platform built exclusively for nonprofits", data-rich/insight-poor), the 6 Reasons to Believe, decisions-first results entry, the two-step (Automate → Illuminate) narrative, and **competitive comparison entries** for Power BI/Tableau/Looker, custom MIS (Dhwani), Zoho (EdZola), DIY Sheets, and do-nothing — each grounded in verified blog/case-study URLs, each using acknowledge-then-reframe (no "bad choice" dismissals), house style (no "X, not Y" contrast phrasing).
+- New system-prompt key **`positioning`** (migration `010_positioning_prompt.sql`), wired into `staticSystem()` after identity: teaches the bot *what to convey* (category, primary benefit = decisions, RTBs, two-step) and *how to handle competitors*, plus house anti-patterns. Complements `rules` (still must ground via `search_dalgo_kb`).
+- Augmented existing KB: `pricing` (no per-user/per-row, flat-as-you-grow — RTB #4), `security` (Digital Public Good recognition + DPDP-readiness-in-progress — RTB #3), `mission` (ecosystem backers: Agency Fund/Goalkeep/Dasra — RTB #6), `data_sources` (connector count 400+ → **600+** + "Dalgo builds new connectors free").
+- `seed:positioning` npm script + `scripts/seed-positioning.ts` — targeted UPSERT (delete-by-exact-question_variants then insert) so it never duplicates and never touches admin-curated rows. Re-embeds the changed data_sources entry.
+- `positioning` added to `KbCategory` (`types.ts`), `schema.sql` (both CHECK blocks + live `ALTER`), `seed-kb.ts`, and the `search_dalgo_kb` tool's category enum (so the bot can scope to it).
+
+**Changed / Fixed**
+- **Deduped the live KB: 352 → 188 rows** (total now == distinct). `seed:kb` does a plain INSERT (not the upsert the CLAUDE.md claims), so it had been run ~2× without reset, leaving ~164 exact duplicates that were consuming `top_k` slots and burying correct answers. FK-safe dedup kept, per duplicate group, the row referenced by `wrong_answer_reports.fixed_kb_id` (else earliest) — wrong-answer fix links held at 5 before/after, no admin content lost.
+- Updated prompt-count assertions 6 → 7 (`prompts-schema.test.ts`, `prompts.test.ts` admin route count, `system-prompt.test.ts` now asserts the positioning block).
+
+**Why**
+- The bot was factually solid but positionally thin: it led with time-savings everywhere, had no competitive answers, and missed every RTB (DPG, ecosystem, no-per-seat pricing). The doc's core reversal — **lead with better decision-making, demote time saved** — needed to live in both the voice (system prompt) and the grounding (KB).
+
+**Eval delta**
+- Retrieval probes before/after dedup: "Does Dalgo charge per user?" went from *absent in top 8* → **rank 1 @ 0.72**; "Why is Dalgo better than Power BI for nonprofits?" → **0.84**; custom-MIS entry rank 1 @ 0.74 (category-scoped) / 0.64 (natural phrasing). Prompt suites 22/22 green. Full `npm run eval` not re-run this session.
+- **Known follow-up:** the verbatim "how is Dalgo different from a custom MIS?" *unfiltered* still favors case studies — an `ivfflat` (lists=50, 1 probe) approximate-recall artifact, not a content gap. Covered via natural phrasings + category filter + system prompt. Consider bumping `ivfflat.probes` in `searchKb`.
+
+**Carried forward**
+- **Prod deploy:** (1) apply the category-CHECK `ALTER` + `scripts/migrations/010_positioning_prompt.sql`; (2) run `npm run seed:positioning` against prod (no reset — it's a targeted upsert); (3) run the FK-safe dedup if prod has the same duplicate bloat. Prompt cache picks up the new key within ~60s.
+- **Real bug to fix separately:** `seed:kb` is not idempotent (no unique constraint / ON CONFLICT) despite the CLAUDE.md description — every non-reset run re-duplicates the whole KB. Add a unique key or switch to upsert.
+
+---
+
 ## 2026-05-31 — Chat greeting + plain-language jargon rule
 
 **Added**

@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS dalgo_knowledge_base (
   category          text NOT NULL CHECK (category IN (
                       'data_sources','transforms','dashboards','orchestration',
                       'ai','sharing','rbac','security','deployment',
-                      'pricing','mission','stack','limitations','case_studies','community')),
+                      'pricing','mission','stack','limitations','case_studies','community',
+                      'positioning','kpis')),
   question_variants text[] NOT NULL,
   canonical_answer  text NOT NULL,
   status            text NOT NULL CHECK (status IN ('yes','partial','no','roadmap')),
@@ -129,13 +130,14 @@ $$;
 -- ============================================================
 
 -- Sync the live category CHECK (case_studies was added in prod
--- but not in schema.sql). Re-running this is idempotent.
+-- but not in schema.sql; positioning added 2026-06). Re-running this is idempotent.
 ALTER TABLE dalgo_knowledge_base DROP CONSTRAINT IF EXISTS dalgo_knowledge_base_category_check;
 ALTER TABLE dalgo_knowledge_base ADD CONSTRAINT dalgo_knowledge_base_category_check
   CHECK (category IN (
     'data_sources','transforms','dashboards','orchestration',
     'ai','sharing','rbac','security','deployment',
-    'pricing','mission','stack','limitations','case_studies','community'
+    'pricing','mission','stack','limitations','case_studies','community',
+    'positioning','kpis'
   ));
 
 CREATE TABLE IF NOT EXISTS dalgo_blog_articles (

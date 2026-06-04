@@ -52,6 +52,27 @@ export const security: KbSeed[] = [
   },
   {
     category: 'security',
+    question_variants: [
+      'Is Dalgo DPDP compliant?',
+      'Is Dalgo ready for India\'s data protection law?',
+      'Is Dalgo a Digital Public Good?',
+      'How does Dalgo handle data privacy and compliance?',
+    ],
+    canonical_answer:
+      'Dalgo is recognised as a Digital Public Good by the Digital Public Goods Alliance (the UN-endorsed registry), it is open-source, and your data stays in your own warehouse. DPDP-readiness (India\'s Digital Personal Data Protection Act) is in progress. Beyond the tool, Dalgo also offers consulting on data-for-decisions and data-for-reporting. Specific certifications such as SOC2, GDPR, or ISO 27001 should be confirmed with the Dalgo team.',
+    status: 'partial',
+    ngo_framing:
+      'Lead with "your data stays in your warehouse" and the Digital Public Good recognition; be honest that DPDP-readiness is in progress, not certified.',
+    evidence: [
+      'Digital Public Goods Alliance registry',
+      'AGPL v3 license',
+    ],
+    notes_for_sales:
+      'DPG status and DPDP-readiness-in-progress confirmed by the Dalgo team (June 2026). SOC2/GDPR/ISO certification status still to confirm per question above.',
+    source_audit_date: '2026-06-04',
+  },
+  {
+    category: 'security',
     question_variants: ['Is Dalgo open source?'],
     canonical_answer:
       'Yes — AGPL v3 license. If you modify and deploy a derivative, you must disclose source.',

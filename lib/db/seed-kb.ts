@@ -16,13 +16,15 @@ import { stack } from './seed-data/stack';
 import { limitations } from './seed-data/limitations';
 import { caseStudies } from './seed-data/case-studies';
 import { community } from './seed-data/community';
+import { positioning } from './seed-data/positioning';
+import { kpis } from './seed-data/kpis';
 import type { KbSeed } from './seed-data/types';
 
 const all: KbSeed[] = [
   ...dataSources, ...transforms, ...dashboards, ...orchestration,
   ...ai, ...sharing, ...rbac, ...security, ...deployment,
   ...pricing, ...mission, ...stack, ...limitations, ...caseStudies,
-  ...community,
+  ...community, ...positioning, ...kpis,
 ];
 
 function pgVectorLiteral(v: number[]): string {
@@ -36,7 +38,8 @@ async function main() {
     `dashboards ${dashboards.length}, orchestration ${orchestration.length}, ai ${ai.length}, ` +
     `sharing ${sharing.length}, rbac ${rbac.length}, security ${security.length}, ` +
     `deployment ${deployment.length}, pricing ${pricing.length}, mission ${mission.length}, ` +
-    `stack ${stack.length}, limitations ${limitations.length}, case_studies ${caseStudies.length}, community ${community.length}`,
+    `stack ${stack.length}, limitations ${limitations.length}, case_studies ${caseStudies.length}, community ${community.length}, ` +
+    `positioning ${positioning.length}, kpis ${kpis.length}`,
   );
 
   if (process.env.SEED_RESET === 'true') {

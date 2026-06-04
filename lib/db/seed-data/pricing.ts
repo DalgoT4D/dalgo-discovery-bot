@@ -127,6 +127,23 @@ export const pricing: KbSeed[] = [
   {
     category: 'pricing',
     question_variants: [
+      'Does Dalgo charge per user?',
+      'Do we pay more as we add more programs or data sources?',
+      'Is Dalgo priced per seat or per row?',
+      'Will our costs go up as our team grows?',
+      'What is Dalgo\'s pricing philosophy?',
+    ],
+    canonical_answer:
+      'Dalgo\'s pricing is designed not to penalise you for growing. There is no charge per user, per data source, or per row. An org can expand from one program to five or more and extend access to M&E, program, leadership, and field teams while the base price stays flat (₹2,04,000/year). This is a deliberate difference from per-seat or per-row commercial tools, where extending access to field staff gets expensive fast — the friction AKRSP hit with Power BI for multi-user access.',
+    status: 'yes',
+    ngo_framing:
+      'For growth-stage NGOs worried about cost scaling with headcount or programs, lead with "the price stays flat as you grow".',
+    evidence: ['https://dalgo.org/pricing/'],
+    source_audit_date: '2026-06-04',
+  },
+  {
+    category: 'pricing',
+    question_variants: [
       'Can I use Dalgo commercially?',
       'Can I self-host Dalgo?',
     ],
