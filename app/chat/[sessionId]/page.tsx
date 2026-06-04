@@ -40,7 +40,7 @@ export default function ChatPage() {
   }, [sessionId]);
 
   const isAdmin = Boolean(meta?.is_admin);
-  const adminEmail = isAdmin ? (meta?.email ?? null) : null;
+  const userEmail = meta?.email ?? null;
 
   // The admin BADGE is driven by sessions.is_admin (in DB), but admin-only
   // ACTIONS still require an active NextAuth session. When those fall out
@@ -63,8 +63,10 @@ export default function ChatPage() {
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" aria-hidden />
               session live
             </span>
-            {adminEmail && (
-              <span className="hidden text-sm text-muted-foreground sm:inline">{adminEmail}</span>
+            {userEmail && (
+              <span className="hidden max-w-[40vw] truncate text-sm text-muted-foreground sm:inline">
+                {userEmail}
+              </span>
             )}
             <GuestAccessButton />
           </div>

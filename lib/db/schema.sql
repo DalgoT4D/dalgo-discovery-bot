@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   ended_at    timestamptz,
   ip          inet,
   email       text,
+  ngo_name    text,
   ngo_url     text,
   ngo_summary text,
   ngo_systems text,

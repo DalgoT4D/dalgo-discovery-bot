@@ -135,6 +135,66 @@ describe('POST /api/intake work_domain', () => {
     ({ rows } = await query(`SELECT work_domain FROM sessions WHERE id = $1`, [session_id]));
     expect(rows[0].work_domain).toBe('data_tech');
   });
+});
+
+describe('POST /api/intake org name + url', () => {
+  function req(body: unknown) {
+    return new Request('http://localhost/api/intake', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }) as unknown as import('next/server').NextRequest;
+  }
+
+  it('persists org_name and org_url when provided', async () => {
+    const email = `intake-org-${Date.now()}@x.org`;
+    const res = await POST(req({ email, org_name: 'Helping Hands', org_url: 'helpinghands.org' }));
+    expect(res.status).toBe(200);
+    const { session_id } = await res.json();
+    const { rows } = await query<{ ngo_name: string | null; ngo_url: string | null }>(
+      `SELECT ngo_name, ngo_url FROM sessions WHERE id = $1`,
+      [session_id],
+    );
+    expect(rows[0].ngo_name).toBe('Helping Hands');
+    expect(rows[0].ngo_url).toBe('helpinghands.org');
+  });
+
+  it('allows omitting org fields (stored as null)', async () => {
+    const email = `intake-noorg-${Date.now()}@x.org`;
+    const res = await POST(req({ email }));
+    expect(res.status).toBe(200);
+    const { session_id } = await res.json();
+    const { rows } = await query<{ ngo_name: string | null; ngo_url: string | null }>(
+      `SELECT ngo_name, ngo_url FROM sessions WHERE id = $1`,
+      [session_id],
+    );
+    expect(rows[0].ngo_name).toBeNull();
+    expect(rows[0].ngo_url).toBeNull();
+  });
+
+  it('backfills org fields on resume but never overwrites an existing value', async () => {
+    const email = `intake-org-backfill-${Date.now()}@x.org`;
+    const first = await POST(req({ email }));
+    const { session_id } = await first.json();
+
+    // Resume with org details → backfilled.
+    await POST(req({ email, org_name: 'First Org', org_url: 'first.org' }));
+    let { rows } = await query<{ ngo_name: string; ngo_url: string }>(
+      `SELECT ngo_name, ngo_url FROM sessions WHERE id = $1`,
+      [session_id],
+    );
+    expect(rows[0].ngo_name).toBe('First Org');
+    expect(rows[0].ngo_url).toBe('first.org');
+
+    // Resume again with different details → must NOT overwrite.
+    await POST(req({ email, org_name: 'Second Org', org_url: 'second.org' }));
+    ({ rows } = await query<{ ngo_name: string; ngo_url: string }>(
+      `SELECT ngo_name, ngo_url FROM sessions WHERE id = $1`,
+      [session_id],
+    ));
+    expect(rows[0].ngo_name).toBe('First Org');
+    expect(rows[0].ngo_url).toBe('first.org');
+  });
 
   afterAll(async () => { await pool().end(); });
 });

@@ -1,5 +1,5 @@
 'use client';
-import { forwardRef, useImperativeHandle } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { MessageBubble } from './message-bubble';
 import { Markdown } from './markdown';
@@ -135,6 +135,34 @@ export const ChatStream = forwardRef<
   const isBusy = isStreaming || isSubmitted;
   const showIntro = messages.length === 0;
 
+  // (d) Auto-grow the input up to ~8 lines, then it scrolls internally.
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [input]);
+
+  // (e) Keep the conversation pinned to the bottom while a reply streams in,
+  // and jump to the bottom whenever a new message is added — unless the user
+  // has deliberately scrolled up to read earlier history.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+  const lastCountRef = useRef(0);
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (messages.length > lastCountRef.current) stickRef.current = true;
+    lastCountRef.current = messages.length;
+    if (stickRef.current) el.scrollTop = el.scrollHeight;
+  }, [messages, status]);
+
   const lastMsg = messages[messages.length - 1];
   const lastIsAssistant = lastMsg?.role === 'assistant';
   const suggestedReplies =
@@ -181,7 +209,7 @@ export const ChatStream = forwardRef<
 
   return (
     <div className="mx-auto flex h-full w-full max-w-3xl flex-col">
-      <div className="flex-1 overflow-y-auto px-4 pb-2">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-4 pb-2">
         {showIntro ? (
           greeting ? (
             // First-visit greeting rendered as the bot's opening message,
@@ -258,25 +286,33 @@ export const ChatStream = forwardRef<
         )}
       </div>
 
-      {messages.filter((m) => m.role === 'user').length >= 3 && (
-        <div className="px-4 lg:fixed lg:right-6 lg:top-28 lg:z-10 lg:w-72 lg:px-0">
-          <FollowupOptin sessionId={sessionId} email={email} />
-        </div>
-      )}
+      {/* Persistent follow-up opt-in — visible throughout the session until the
+          user acts on it (FollowupOptin self-hides once opted-in or dismissed). */}
+      <div className="px-4 lg:fixed lg:right-6 lg:top-28 lg:z-10 lg:w-72 lg:px-0">
+        <FollowupOptin sessionId={sessionId} email={email} />
+      </div>
 
       <form onSubmit={handleSubmit} className="px-4 pb-6 pt-2">
         <div
           className={cn(
-            'relative flex items-center rounded-3xl border border-border bg-card shadow-sm transition-shadow',
+            'relative flex items-end rounded-3xl border border-border bg-card shadow-sm transition-shadow',
             'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background hover:shadow-md',
             isBusy && 'opacity-60',
           )}
         >
-          <input
+          <textarea
+            ref={taRef}
             value={input}
             onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!isBusy && input.trim()) e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            rows={1}
             placeholder="Ask anything about Dalgo…"
-            className="flex-1 bg-transparent px-5 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="max-h-50 flex-1 resize-none overflow-y-auto bg-transparent px-5 py-3.5 text-[15px] leading-6 text-foreground placeholder:text-muted-foreground focus:outline-none"
             disabled={isBusy}
           />
           <button
@@ -284,7 +320,7 @@ export const ChatStream = forwardRef<
             disabled={isBusy || !input.trim()}
             aria-label="Send"
             className={cn(
-              'mr-2 inline-flex h-9 w-9 items-center justify-center rounded-full',
+              'mb-2 mr-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
               'bg-primary text-primary-foreground transition-opacity',
               'hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none',
             )}
@@ -306,7 +342,7 @@ export const ChatStream = forwardRef<
           </button>
         </div>
         <div className="ml-1 mr-1 mt-2 flex items-center justify-between text-xs text-muted-foreground">
-          <span>⏎ to send</span>
+          <span>⏎ to send · ⇧⏎ for a new line</span>
           <span>Powered by Anthropic</span>
         </div>
       </form>

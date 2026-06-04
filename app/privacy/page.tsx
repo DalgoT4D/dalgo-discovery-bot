@@ -56,8 +56,8 @@ export default function Privacy() {
               Requesting deletion
             </h2>
             <p className="text-foreground">
-              Email <strong>privacy@dalgo.org</strong> with the URL you visited and we will purge
-              any session associated with that visit.
+              Email <strong>privacy@dalgo.org</strong> or <strong>support@dalgo.org</strong> with the
+              URL you visited and we will purge any session associated with that visit.
             </p>
 
             <p className="mt-8 text-xs text-muted-foreground">

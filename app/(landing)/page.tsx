@@ -17,6 +17,8 @@ export default function Landing() {
   const [mode, setMode] = useState<Mode>('guest');
   const [email, setEmail] = useState('');
   const [workDomain, setWorkDomain] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [orgUrl, setOrgUrl] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,8 @@ export default function Landing() {
       body: JSON.stringify({
         email: emailValue,
         ...(workDomain ? { work_domain: workDomain } : {}),
+        ...(orgName.trim() ? { org_name: orgName.trim() } : {}),
+        ...(orgUrl.trim() ? { org_url: orgUrl.trim() } : {}),
       }),
     });
     if (!res.ok) {
@@ -172,6 +176,23 @@ export default function Landing() {
                       </option>
                     ))}
                   </select>
+                  <Input
+                    type="text"
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="Organisation name (optional)"
+                    disabled={submitting}
+                    aria-label="Organisation name (optional)"
+                  />
+                  <Input
+                    type="text"
+                    inputMode="url"
+                    value={orgUrl}
+                    onChange={(e) => setOrgUrl(e.target.value)}
+                    placeholder="Organisation website (optional)"
+                    disabled={submitting}
+                    aria-label="Organisation website (optional)"
+                  />
                   <Button type="submit" disabled={submitting || !email} className="w-full">
                     {submitting ? 'Starting…' : 'Start chatting →'}
                   </Button>
