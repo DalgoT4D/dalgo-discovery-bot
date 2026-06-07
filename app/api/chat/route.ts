@@ -239,5 +239,15 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return result.toDataStreamResponse();
+  // Streaming must not be buffered by an intermediary. Behind nginx (the EC2
+  // staging proxy) the default `proxy_buffering on` accumulates the whole
+  // upstream body and flushes at the end — the user sees a spinner, then one
+  // big dump. `X-Accel-Buffering: no` tells nginx to stream this response
+  // verbatim; `no-transform` stops any proxy/CDN from buffering to recompress.
+  return result.toDataStreamResponse({
+    headers: {
+      'X-Accel-Buffering': 'no',
+      'Cache-Control': 'no-cache, no-transform',
+    },
+  });
 }
