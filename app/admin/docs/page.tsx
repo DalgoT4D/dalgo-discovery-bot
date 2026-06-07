@@ -22,7 +22,7 @@ export default function DocsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Product docs</h1>
           <p className="text-sm text-muted-foreground">
-            Indexed from <code className="font-mono">dalgot4d.github.io/dalgo_docs</code>. Used by the
+            Indexed from <code className="font-mono">docs.dalgo.org</code>. Used by the
             <code className="mx-1 font-mono">search_dalgo_docs</code> tool for how-to / configuration questions.
           </p>
         </div>

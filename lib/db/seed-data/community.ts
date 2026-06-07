@@ -100,12 +100,12 @@ export const community: KbSeed[] = [
       'Do you have a blog?',
     ],
     canonical_answer:
-      'Three good places, in increasing depth: (1) curated resources at https://dalgo.org/resources/ (videos, decks, summaries); (2) the Project Tech4Dev blog at https://projecttech4dev.org/ for customer stories and product updates; (3) the product documentation at https://dalgot4d.github.io/dalgo_docs/ for how-to / setup / configuration. I can also pull case studies and how-tos directly into this conversation — just ask.',
+      'Three good places, in increasing depth: (1) curated resources at https://dalgo.org/resources/ (videos, decks, summaries); (2) the Project Tech4Dev blog at https://projecttech4dev.org/ for customer stories and product updates; (3) the product documentation at https://docs.dalgo.org/ for how-to / setup / configuration. I can also pull case studies and how-tos directly into this conversation — just ask.',
     status: 'yes',
     evidence: [
       'https://dalgo.org/resources/',
       'https://projecttech4dev.org/',
-      'https://dalgot4d.github.io/dalgo_docs/',
+      'https://docs.dalgo.org/',
     ],
     source_audit_date: '2026-05-30',
   },

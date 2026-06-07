@@ -76,7 +76,7 @@ The bot has **three retrieval stores**, each searched by a separate tool:
 |---|---|---|---|
 | Curated KB (~164 entries, 14 categories incl. `case_studies`) | `lib/db/seed-data/*.ts` — hand-written Q&A | `search_dalgo_kb` | Capability / pricing / fit questions |
 | Blogs (~107 articles) | Scrape of `projecttech4dev.org` | `search_dalgo_blogs` | Customer stories, sector / tool mentions |
-| Product docs (~60 pages) | Scrape of `dalgot4d.github.io/dalgo_docs` | `search_dalgo_docs` | How-to / config / mechanics |
+| Product docs (~60 pages) | Scrape of `docs.dalgo.org` | `search_dalgo_docs` | How-to / config / mechanics |
 
 Admin UI: `/admin/kb`, `/admin/blogs`, `/admin/prompts` (Google SSO required).
 

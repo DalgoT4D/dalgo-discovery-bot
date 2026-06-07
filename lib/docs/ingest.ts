@@ -7,7 +7,7 @@ import { upsertDocPage } from './upsert';
 import type { DocsJobSummary, EmbeddedDocChunk } from './types';
 
 const UA = 'DalgoDiscoveryBot/1.0 (+https://dalgo.org)';
-const DEFAULT_SITEMAP = 'https://dalgot4d.github.io/dalgo_docs/sitemap.xml';
+const DEFAULT_SITEMAP = 'https://docs.dalgo.org/sitemap.xml';
 
 export interface IngestDocsOpts {
   sitemapUrl?: string;

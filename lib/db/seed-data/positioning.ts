@@ -109,7 +109,7 @@ export const positioning: KbSeed[] = [
     evidence: [
       'Digital Public Goods Alliance registry',
       'https://projecttech4dev.org/dalgo-in-2025-keeping-customers-front-and-centre/',
-      'https://dalgot4d.github.io/dalgo_docs/',
+      'https://docs.dalgo.org/',
     ],
     notes_for_sales:
       'DPDP-readiness is in progress, not certified. SOC2/GDPR/ISO certification status should still be confirmed with the team (see security category).',

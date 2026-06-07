@@ -7,7 +7,7 @@ import { emit } from '@/lib/telemetry';
 export function searchDalgoDocsTool(sessionId: string) {
   return tool({
     description:
-      "Search the official Dalgo product documentation (dalgot4d.github.io/dalgo_docs). Use this for HOW-TO / configuration / mechanics questions: how to set up X, where a setting lives, what a feature actually does step-by-step. Returns chunks with the doc page URL — always cite it so the user can read more.",
+      "Search the official Dalgo product documentation (docs.dalgo.org). Use this for HOW-TO / configuration / mechanics questions: how to set up X, where a setting lives, what a feature actually does step-by-step. Returns chunks with the doc page URL — always cite it so the user can read more.",
     parameters: z.object({
       query: z.string().describe('What to look up in the product docs'),
       top_k: z.number().int().min(1).max(8).default(4),
