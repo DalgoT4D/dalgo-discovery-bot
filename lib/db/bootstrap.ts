@@ -10,8 +10,11 @@ export async function seedSystemAdminFromEnv(): Promise<void> {
   if (!username || !hash) return;
   const count = await countAdmins();
   if (count > 0) return;
+  // If ADMIN_USERNAME is already an email, use it verbatim as the login email;
+  // otherwise synthesize a local one (e.g. "admin" -> "admin@local.admin").
+  const email = username.includes('@') ? username.toLowerCase() : `${username}@local.admin`;
   await createAdmin({
-    email: `${username}@local.admin`,
+    email,
     passwordHash: hash,
     isSystem: true,
     createdBy: null,
