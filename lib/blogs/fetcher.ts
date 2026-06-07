@@ -2,10 +2,14 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { RawPost } from './types';
 
 const UA = 'DalgoDiscoveryBot/1.0 (+https://dalgo.org)';
-const DEFAULT_CACHE_DIR = '.cache/blogs';
+// Default under the OS temp dir so it's writable when the app runs as a
+// non-root user in a container (the project dir is read-only there). Override
+// with BLOG_CACHE_DIR. Locally this resolves to e.g. /tmp/dalgo-discovery-blogs.
+const DEFAULT_CACHE_DIR = process.env.BLOG_CACHE_DIR ?? join(tmpdir(), 'dalgo-discovery-blogs');
 
 export interface FetchOpts {
   cacheDir?: string;
