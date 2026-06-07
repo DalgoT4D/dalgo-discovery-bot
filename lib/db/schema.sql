@@ -37,7 +37,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   ngo_systems text,
   data_types  text[],
   pdf_url     text,
-  pdf_text    text
+  pdf_text    text,
+  -- Cached personalized intro (greeting + starter chips) produced once per
+  -- session by lib/llm/intro-generator.ts. Historically added via a manual
+  -- ALTER and missing from schema.sql, which 500'd /api/chat on fresh deploys.
+  intro_text     text,
+  intro_starters text[]
 );
 CREATE INDEX IF NOT EXISTS sessions_created_idx ON sessions (created_at DESC);
 
