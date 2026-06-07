@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:migrate": "DOTENV_CONFIG_PATH=.env.local tsx scripts/migrate.ts",
     "test": "DOTENV_CONFIG_PATH=.env.local vitest run",
     "test:watch": "DOTENV_CONFIG_PATH=.env.local vitest",
     "test:e2e": "playwright test",
