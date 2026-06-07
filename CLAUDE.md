@@ -22,7 +22,7 @@ npm run dev                # Next.js dev server (Turbopack) → http://localhost
 npm run build / npm start  # production
 npm run lint               # ESLint
 
-npm test                   # Vitest unit + integration (loads .env.local via DOTENV_CONFIG_PATH)
+npm test                   # Vitest unit + integration (loads .env via DOTENV_CONFIG_PATH)
 npm test -- tests/lib/pii-redact.test.ts   # single test file
 npm run test:e2e           # Playwright happy path (auto-starts dev server)
 npm run eval               # LLM eval suite, tests/llm/eval.test.ts (needs ANTHROPIC_API_KEY + OPENAI_API_KEY)
@@ -34,7 +34,7 @@ npm run admin:hash         # bcrypt-hash a password for the Credentials admin lo
 
 ## Database
 - Local **Postgres 16 + pgvector** via `docker-compose.yml` (host port **5436**, not Supabase cloud).
-- Connection string in `.env.local`: `DATABASE_URL=postgres://dalgo:dalgo_dev@localhost:5436/dalgo_discovery`
+- Connection string in `.env`: `DATABASE_URL=postgres://dalgo:dalgo_dev@localhost:5436/dalgo_discovery`
 - Start DB: `docker compose up -d`
 - Apply schema: `docker exec -i dalgo-discovery-db psql -U dalgo -d dalgo_discovery < lib/db/schema.sql`
 - Reset (destructive but project-local — OK): `docker compose down -v && docker compose up -d`

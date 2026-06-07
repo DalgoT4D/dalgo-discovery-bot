@@ -64,7 +64,7 @@ export function SignInForm() {
         <p className="text-xs text-muted-foreground">
           First-time setup: set <code className="bg-muted px-1 rounded">ADMIN_USERNAME</code> and{' '}
           <code className="bg-muted px-1 rounded">ADMIN_PASSWORD_HASH</code> in{' '}
-          <code className="bg-muted px-1 rounded">.env.local</code>. The system admin is seeded
+          <code className="bg-muted px-1 rounded">.env</code>. The system admin is seeded
           automatically on first sign-in.
         </p>
       </CardContent>

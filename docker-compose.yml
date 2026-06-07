@@ -33,10 +33,10 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    # Pull API keys etc. from .env.local; absent file is fine (keys can come
+    # Pull API keys etc. from .env; absent file is fine (keys can come
     # from the shell environment instead).
     env_file:
-      - path: .env.local
+      - path: .env
         required: false
     environment:
       NODE_ENV: production
@@ -45,7 +45,7 @@ services:
       # runtime, so it applies without a rebuild.
       AUTH_TRUST_HOST: "true"
       # Inside the compose network the DB is the 'postgres' service on 5432.
-      # This overrides the localhost:5436 DATABASE_URL in .env.local.
+      # This overrides the localhost:5436 DATABASE_URL in .env.
       DATABASE_URL: postgres://dalgo:dalgo_dev@postgres:5432/dalgo_discovery
     depends_on:
       postgres:

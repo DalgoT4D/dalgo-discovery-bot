@@ -20,7 +20,7 @@ docker compose up -d
 docker exec -i dalgo-discovery-db psql -U dalgo -d dalgo_discovery < lib/db/schema.sql
 
 # 3. Configure env
-cp .env.example .env.local
+cp .env.example .env
 # fill in ANTHROPIC_API_KEY, OPENAI_API_KEY (for embeddings), TAVILY_API_KEY,
 # NEXTAUTH_SECRET, GOOGLE_CLIENT_ID/SECRET, etc.
 

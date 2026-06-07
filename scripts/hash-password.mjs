@@ -12,7 +12,7 @@ const h = await hash(pw, 10);
 const escaped = h.replace(/\$/g, '\\$');
 
 console.log('');
-console.log('Add these to .env.local (note the backslash-escaped $ — required):');
+console.log('Add these to .env (note the backslash-escaped $ — required):');
 console.log('');
 console.log(`ADMIN_USERNAME=admin`);
 console.log(`ADMIN_PASSWORD_HASH=${escaped}`);

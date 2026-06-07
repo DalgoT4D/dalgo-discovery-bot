@@ -25,7 +25,7 @@ function sslConfig() {
 export function pool(): Pool {
   if (!_pool) {
     if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL is not set. Configure it in .env.local.');
+      throw new Error('DATABASE_URL is not set. Configure it in .env.');
     }
     _pool = new Pool({
       connectionString: process.env.DATABASE_URL,
