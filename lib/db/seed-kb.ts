@@ -49,15 +49,25 @@ async function main() {
 
   const batchSize = 50;
   let inserted = 0;
+  let cleared = 0;
   for (let i = 0; i < all.length; i += batchSize) {
     const slice = all.slice(i, i + batchSize);
     const texts = slice.map(s => `${s.question_variants.join(' | ')}\n\n${s.canonical_answer}`);
     const vectors = await embedBatch(texts);
 
-    // Insert each row with a parameterized query (avoid building a giant single-INSERT)
+    // UPSERT each entry: clear any existing row(s) with the SAME question_variants
+    // signature, then insert one fresh embedded row. This makes a non-reset
+    // `seed:kb` idempotent (re-running never duplicates) and self-heals any
+    // earlier duplicates of a seeded entry. Admin-curated rows (whose
+    // question_variants don't match any seed entry) are left untouched.
     for (let j = 0; j < slice.length; j++) {
       const s = slice[j];
       const v = vectors[j];
+      const del = await query(
+        `DELETE FROM dalgo_knowledge_base WHERE question_variants = $1::text[]`,
+        [s.question_variants],
+      );
+      cleared += del.rowCount ?? 0;
       await query(
         `INSERT INTO dalgo_knowledge_base
           (category, question_variants, canonical_answer, status, ngo_framing,
@@ -77,10 +87,10 @@ async function main() {
       );
       inserted++;
     }
-    console.log(`  embedded + inserted ${Math.min(i + batchSize, all.length)} / ${all.length}`);
+    console.log(`  embedded + upserted ${Math.min(i + batchSize, all.length)} / ${all.length}`);
   }
 
-  console.log(`✓ Seeded ${inserted} entries.`);
+  console.log(`✓ Upserted ${inserted} entries (cleared ${cleared} prior row(s) for those entries).`);
   await pool().end();
 }
 

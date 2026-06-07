@@ -11,6 +11,7 @@ export async function GET() {
         s.created_at,
         s.email,
         s.work_domain,
+        s.ngo_name,
         s.ngo_url,
         s.wants_followup,
         s.triage_status,

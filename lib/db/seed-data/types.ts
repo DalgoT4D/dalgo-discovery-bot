@@ -1,9 +1,16 @@
 export type KbStatus = 'yes' | 'partial' | 'no' | 'roadmap';
-export type KbCategory =
-  | 'data_sources' | 'transforms' | 'dashboards' | 'orchestration'
-  | 'ai' | 'sharing' | 'rbac' | 'security' | 'deployment'
-  | 'pricing' | 'mission' | 'stack' | 'limitations' | 'case_studies'
-  | 'community' | 'positioning' | 'kpis';
+
+// Single source of truth for KB categories. Reference this everywhere a
+// category list is needed (zod enums in admin routes, the search tool) so the
+// set can't drift. MUST stay in sync with the CHECK constraint in schema.sql.
+export const KB_CATEGORIES = [
+  'data_sources', 'transforms', 'dashboards', 'orchestration',
+  'ai', 'sharing', 'rbac', 'security', 'deployment',
+  'pricing', 'mission', 'stack', 'limitations', 'case_studies',
+  'community', 'positioning', 'kpis',
+] as const;
+
+export type KbCategory = (typeof KB_CATEGORIES)[number];
 
 export interface KbSeed {
   category: KbCategory;

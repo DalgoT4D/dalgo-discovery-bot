@@ -40,8 +40,8 @@ npm run seed:kb:reset   # requires OPENAI_API_KEY
 - `npm test` — Vitest unit + integration
 - `npm run test:e2e` — Playwright happy path
 - `npm run eval` — 30-case LLM eval suite (requires ANTHROPIC_API_KEY + OPENAI_API_KEY)
-- `npm run seed:kb` — incrementally embed + insert KB rows
-- `npm run seed:kb:reset` — truncate + re-seed all entries
+- `npm run seed:kb` — embed + **upsert** KB rows (idempotent: re-run safe, never duplicates, preserves admin-added rows)
+- `npm run seed:kb:reset` — truncate + re-seed all entries (wipes admin-added rows)
 - `npm run seed:blogs` — crawl + index projecttech4dev.org blog posts
 - `npm run seed:docs` — crawl + index the Dalgo product docs site
 - `npm run lint` — ESLint

@@ -3,26 +3,7 @@ import { z } from 'zod';
 import { searchKb } from '@/lib/db/queries/kb';
 import { query } from '@/lib/db/client';
 import { emit } from '@/lib/telemetry';
-
-const CATEGORIES = [
-  'data_sources',
-  'transforms',
-  'dashboards',
-  'orchestration',
-  'ai',
-  'sharing',
-  'rbac',
-  'security',
-  'deployment',
-  'pricing',
-  'mission',
-  'stack',
-  'limitations',
-  'case_studies',
-  'community',
-  'positioning',
-  'kpis',
-] as const;
+import { KB_CATEGORIES } from '@/lib/db/seed-data/types';
 
 export function searchDalgoKbTool(sessionId: string) {
   return tool({
@@ -30,7 +11,7 @@ export function searchDalgoKbTool(sessionId: string) {
       "Search Dalgo's capability knowledge base. Use this BEFORE making any factual claim about Dalgo features, pricing, or limitations.",
     parameters: z.object({
       query: z.string().describe('The capability question to look up'),
-      category: z.enum(CATEGORIES).optional(),
+      category: z.enum(KB_CATEGORIES).optional(),
       top_k: z.number().int().min(1).max(8).default(4),
     }),
     execute: async ({ query: q, category, top_k }) => {

@@ -5,13 +5,14 @@ import { embed } from '@/lib/embeddings';
 import { insertKbEntryTx, versionAndUpdateKbTx } from '@/lib/db/queries/kb';
 import { runPipeline } from '@/lib/llm/rag/pipeline';
 import { invalidateEvalCaseCache } from '@/lib/llm/eval/case-source';
+import { KB_CATEGORIES } from '@/lib/db/seed-data/types';
 import { z } from 'zod';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const Draft = z.object({
-  category: z.enum(['data_sources', 'transforms', 'dashboards', 'orchestration', 'ai', 'sharing', 'rbac', 'security', 'deployment', 'pricing', 'mission', 'stack', 'limitations', 'case_studies', 'community']),
+  category: z.enum(KB_CATEGORIES),
   question_variants: z.array(z.string().min(1)).min(1),
   canonical_answer: z.string().min(1),
   status: z.enum(['yes', 'partial', 'no', 'roadmap']),

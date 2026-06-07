@@ -13,6 +13,7 @@ type LeadRow = {
   created_at: string;
   email: string;
   work_domain: string | null;
+  ngo_name: string | null;
   ngo_url: string | null;
   wants_followup: boolean;
   requested_demo: boolean;
@@ -28,6 +29,7 @@ export function LeadTable() {
     fetcher,
   );
   const [tab, setTab] = useState<TriageStatus>('new');
+  const [search, setSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function setStatus(sessionId: string, status: TriageStatus) {
@@ -58,7 +60,13 @@ export function LeadTable() {
   if (error) return <p>Error.</p>;
 
   const items = data?.items ?? [];
-  const rows = items.filter((l) => l.triage_status === tab);
+  const q = search.trim().toLowerCase();
+  const matches = (l: LeadRow) =>
+    !q ||
+    [l.email, l.ngo_name, l.ngo_url, workDomainLabel(l.work_domain)].some((v) =>
+      (v ?? '').toLowerCase().includes(q),
+    );
+  const rows = items.filter((l) => l.triage_status === tab && matches(l));
   const count = (s: TriageStatus) => items.filter((l) => l.triage_status === s).length;
 
   return (
@@ -68,7 +76,7 @@ export function LeadTable() {
           {actionError}
         </p>
       )}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {TABS.map((t) => (
           <button
             key={t}
@@ -84,6 +92,13 @@ export function LeadTable() {
             {t} ({count(t)})
           </button>
         ))}
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search email, org, URL, role…"
+          className="ml-auto w-72 max-w-full rounded-md border border-input bg-card px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+        />
       </div>
 
       <table className="w-full text-sm">
@@ -91,6 +106,7 @@ export function LeadTable() {
           <tr className="border-b border-border text-left">
             <th className="p-2">Created</th>
             <th className="p-2">Email</th>
+            <th className="p-2">Org</th>
             <th className="p-2">Role</th>
             <th className="p-2">NGO URL</th>
             <th className="p-2">Follow-up?</th>
@@ -104,6 +120,7 @@ export function LeadTable() {
             <tr key={l.session_id} className="border-b border-border">
               <td className="p-2">{new Date(l.created_at).toLocaleString()}</td>
               <td className="p-2">{l.email}</td>
+              <td className="p-2">{l.ngo_name ?? '—'}</td>
               <td className="p-2">{workDomainLabel(l.work_domain)}</td>
               <td className="p-2">{l.ngo_url ?? '—'}</td>
               <td className="p-2">{l.wants_followup ? '✓' : '—'}</td>
@@ -134,8 +151,8 @@ export function LeadTable() {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td className="p-4 text-muted-foreground" colSpan={8}>
-                No {tab} leads.
+              <td className="p-4 text-muted-foreground" colSpan={9}>
+                {q ? `No ${tab} leads match “${search.trim()}”.` : `No ${tab} leads.`}
               </td>
             </tr>
           )}

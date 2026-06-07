@@ -6,6 +6,23 @@ this is a timeline you'll scan a year from now, not a design doc.
 
 ---
 
+## 2026-06-04 — Make `seed:kb` idempotent + deploy bootstrap
+
+**Changed**
+- `lib/db/seed-kb.ts` is now a true **upsert**: per entry it DELETEs any row(s) with the same `question_variants` signature, then inserts one fresh embedded row. A non-reset `npm run seed:kb` is now idempotent — re-running never duplicates, self-heals pre-existing duplicates of a seeded entry, and leaves admin-curated rows (whose variants match no seed entry) untouched. Was a plain INSERT that duplicated the whole KB on every run.
+- `scripts/db-bootstrap.sh` (new): applies `schema.sql` → all `scripts/migrations/*.sql` → all `lib/db/migrations/*.sql` → re-applies `schema.sql` (to converge the drifted `dalgo_knowledge_base` category CHECK). One command to bring a fresh remote/RDS DB to current schema + system-prompt rows.
+
+**Why**
+- The duplicate-on-every-run behavior forced a choice between `seed:kb:reset` (wipes admin rows) and the targeted `seed:positioning`/`seed:kpis` upserts. Now plain `seed:kb` is safe to re-run on prod. The bootstrap script removes the error-prone hand-running of 18 SQL files during deploy.
+
+**Eval delta**
+- None (data plumbing). Verified idempotency on the live DB: row count held at **200 total / 200 distinct** across two consecutive `seed:kb` runs (cleared 195, upserted 195 each time; the 5 admin-curated rows preserved). Bootstrap verified on a throwaway DB: 7 prompt keys, 24 tables, all session columns, `positioning`/`kpis` categories accepted. Lint clean.
+
+**Carried forward**
+- Optional hardening: a DB-level `UNIQUE` index on `question_variants` would enforce no-dupes from any insert path, but can't be added until a prod DB is deduped first. App-level upsert covers the seed path.
+
+---
+
 ## 2026-06-04 — KB for the new Metrics & KPIs feature
 
 **Added**
