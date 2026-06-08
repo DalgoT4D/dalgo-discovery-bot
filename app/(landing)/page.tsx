@@ -167,9 +167,14 @@ export default function Landing() {
                   <select
                     value={workDomain}
                     onChange={(e) => setWorkDomain(e.target.value)}
+                    required
+                    disabled={submitting}
+                    aria-label="Your role"
                     className="h-10 w-full rounded-md border border-input bg-card px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
                   >
-                    <option value="">Your role (optional)</option>
+                    <option value="" disabled>
+                      Your role
+                    </option>
                     {WORK_DOMAINS.map((d) => (
                       <option key={d.value} value={d.value}>
                         {d.label}
@@ -178,11 +183,12 @@ export default function Landing() {
                   </select>
                   <Input
                     type="text"
+                    required
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
-                    placeholder="Organisation name (optional)"
+                    placeholder="Organisation name"
                     disabled={submitting}
-                    aria-label="Organisation name (optional)"
+                    aria-label="Organisation name"
                   />
                   <Input
                     type="text"
@@ -193,7 +199,11 @@ export default function Landing() {
                     disabled={submitting}
                     aria-label="Organisation website (optional)"
                   />
-                  <Button type="submit" disabled={submitting || !email} className="w-full">
+                  <Button
+                    type="submit"
+                    disabled={submitting || !email || !workDomain || !orgName.trim()}
+                    className="w-full"
+                  >
                     {submitting ? 'Starting…' : 'Start chatting →'}
                   </Button>
                   {error ? (
