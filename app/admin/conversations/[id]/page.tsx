@@ -8,14 +8,39 @@ import { WrongAnswerModal } from '@/components/admin/wrong-answer-modal';
 import { Markdown } from '@/components/markdown';
 import { Card } from '@/components/ui/card';
 
+type WrongStatus = 'pending' | 'resolved' | 'dismissed';
+
 type MessageRow = {
   id: string;
   role: 'user' | 'assistant' | 'tool';
   content: unknown;
   created_at: string;
+  wrong_status?: WrongStatus | null;
+  wrong_reason?: string | null;
 };
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
+
+// Highlight messages that were flagged as wrong, colored by report status.
+// pending = needs attention (red), resolved = fixed in KB (green),
+// dismissed = judged not-wrong (muted/struck).
+const WRONG_STYLES: Record<WrongStatus, { card: string; badge: string; label: string }> = {
+  pending: {
+    card: 'border-red-500 bg-red-50 dark:bg-red-950/30',
+    badge: 'bg-red-600 text-white',
+    label: 'Marked wrong · pending',
+  },
+  resolved: {
+    card: 'border-green-600 bg-green-50 dark:bg-green-950/30',
+    badge: 'bg-green-600 text-white',
+    label: 'Marked wrong · resolved',
+  },
+  dismissed: {
+    card: 'border-muted-foreground/40 bg-muted/40',
+    badge: 'bg-muted-foreground/70 text-background',
+    label: 'Marked wrong · dismissed',
+  },
+};
 
 export default function ConversationDetailPage() {
   const params = useParams<{ id: string }>();
@@ -50,10 +75,21 @@ export default function ConversationDetailPage() {
       <div className="space-y-4">
         {messages.map((m, idx) => {
           const text = asText(m.content);
+          const wrong = m.wrong_status ? WRONG_STYLES[m.wrong_status] : null;
           return (
-            <Card key={m.id} className="p-4">
-              <div className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                {m.role}
+            <Card key={m.id} className={'p-4' + (wrong ? ' ' + wrong.card : '')}>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  {m.role}
+                </span>
+                {wrong && (
+                  <span
+                    className={'rounded px-1.5 py-0.5 text-[10px] font-medium ' + wrong.badge}
+                    title={m.wrong_reason ?? undefined}
+                  >
+                    {wrong.label}
+                  </span>
+                )}
               </div>
               <div className="text-[15px] leading-relaxed text-foreground">
                 {m.role === 'assistant' ? (

@@ -7,11 +7,26 @@ export interface MessageRow {
   content: unknown;
   token_count: number | null;
   created_at: string;
+  /** Status of a wrong-answer report on this message, if any (one per message,
+   *  pending prioritized). Null when the message was never flagged. */
+  wrong_status?: 'pending' | 'resolved' | 'dismissed' | null;
+  wrong_reason?: string | null;
 }
 
 export async function listMessages(sessionId: string): Promise<MessageRow[]> {
   const { rows } = await query<MessageRow>(
-    'SELECT * FROM messages WHERE session_id = $1 ORDER BY created_at',
+    `SELECT m.*, w.status AS wrong_status, w.reason AS wrong_reason
+       FROM messages m
+       LEFT JOIN LATERAL (
+         SELECT status, reason
+           FROM wrong_answer_reports
+          WHERE message_id = m.id
+          ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'resolved' THEN 1 ELSE 2 END,
+                   reported_at DESC
+          LIMIT 1
+       ) w ON true
+      WHERE m.session_id = $1
+      ORDER BY m.created_at`,
     [sessionId],
   );
   return rows;
