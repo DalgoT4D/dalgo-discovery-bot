@@ -12,6 +12,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time, so they
+# must be present during `npm run build` (the runtime env_file is too late).
+# Passed in from docker-compose.prod.yml build.args, which reads them from .env.
+ARG NEXT_PUBLIC_PLATFORM_URL
+ARG NEXT_PUBLIC_GUEST_EMAIL
+ARG NEXT_PUBLIC_GUEST_PASSWORD
+ENV NEXT_PUBLIC_PLATFORM_URL=$NEXT_PUBLIC_PLATFORM_URL \
+    NEXT_PUBLIC_GUEST_EMAIL=$NEXT_PUBLIC_GUEST_EMAIL \
+    NEXT_PUBLIC_GUEST_PASSWORD=$NEXT_PUBLIC_GUEST_PASSWORD
 RUN npm run build
 
 # ── runner: minimal image that serves the standalone bundle ─────────────────

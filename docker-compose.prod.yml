@@ -10,6 +10,13 @@ services:
   app:
     build:
       context: .
+      # NEXT_PUBLIC_* are inlined at build time — pass them as build args so the
+      # client bundle picks up per-environment values. Compose interpolates
+      # ${VAR} from the .env file in this directory; the :- value is the fallback.
+      args:
+        NEXT_PUBLIC_PLATFORM_URL: ${NEXT_PUBLIC_PLATFORM_URL:-http://localhost:3001}
+        NEXT_PUBLIC_GUEST_EMAIL: ${NEXT_PUBLIC_GUEST_EMAIL:-guest_user@dalgo.org}
+        NEXT_PUBLIC_GUEST_PASSWORD: ${NEXT_PUBLIC_GUEST_PASSWORD:-password}
     container_name: dalgo-discovery-app
     restart: unless-stopped
     ports:
